@@ -1,0 +1,32 @@
+@import "tailwindcss";
+@import "@catppuccin/tailwindcss/frappe.css";
+@import "@fontsource/inter";
+@import "@fontsource/jetbrains-mono";
+
+@layer base {
+    html {
+        content-visibility: auto;
+        contain-intrinsic-size: 1000px;
+    }
+
+    body {
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    a:hover {
+        background: linear-gradient(to right, var(--color-ctp-rosewater), var(--color-ctp-mauve-200));
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+}
+
+@theme {
+    --font-sans: "Inter", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+
+    --text-muted: var(--color-ctp-subtext1);
+
+    --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
+}

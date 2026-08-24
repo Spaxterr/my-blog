@@ -1,0 +1,76 @@
+{
+    "root": false,
+    "$schema": "https://biomejs.dev/schemas/2.5.10/schema.json",
+    "extends": "//",
+    "files": {
+        "includes": ["**", "!dist"]
+    },
+    "linter": {
+        "domains": {
+            "qwik": "recommended",
+            "tailwind": "recommended",
+            "project": "recommended",
+            "test": "recommended"
+        },
+        "rules": {
+            "performance": {
+                "noAccumulatingSpread": "error",
+                "noBarrelFile": "error",
+                "noDelete": "error",
+                "noDynamicNamespaceImportAccess": "error",
+                "noImgElement": "off",
+                "noNamespaceImport": "error",
+                "noReExportAll": "error",
+                "noSyncScripts": "error",
+                "useTopLevelRegex": "error"
+            },
+            "security": {
+                "noBlankTarget": "error",
+                "noDangerouslySetInnerHtml": "error",
+                "noDangerouslySetInnerHtmlWithChildren": "error",
+                "noGlobalEval": "error",
+                "noScriptUrl": "error",
+                "noSecrets": "error"
+            },
+            "suspicious": {
+                "noExplicitAny": "error",
+                "noConsole": {
+                    "level": "error",
+                    "options": { "allow": ["error", "warn"] }
+                },
+                "noDebugger": "error"
+            },
+            "correctness": {
+                "noUndeclaredDependencies": "error",
+                "useExhaustiveDependencies": "error"
+            },
+            "style": {
+                "noNonNullAssertion": "error",
+                "useConst": "error",
+                "noParameterAssign": "error"
+            },
+            "nursery": {
+                "recommended": true
+            }
+        }
+    },
+    "assist": {
+        "actions": {
+            "source": {
+                "noDuplicateClasses": "on"
+            }
+        }
+    },
+    "css": {
+        "parser": {
+            "tailwindDirectives": true
+        },
+        "formatter": {
+            "enabled": true,
+            "quoteStyle": "double",
+            "indentStyle": "space",
+            "indentWidth": 4,
+            "lineWidth": 110
+        }
+    }
+}
