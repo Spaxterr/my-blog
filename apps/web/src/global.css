@@ -1,32 +1,346 @@
 @import "tailwindcss";
 @import "@catppuccin/tailwindcss/frappe.css";
-@import "@fontsource/inter";
-@import "@fontsource/jetbrains-mono";
+
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-700.css";
+@import "@fontsource/jetbrains-mono/latin-300.css";
+@import "@fontsource/jetbrains-mono/latin-400.css";
+
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:where(.frappe, .frappe *, .macchiato, .macchiato *, .mocha, .mocha *));
+
+@theme {
+    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+    --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
+
+    --default-transition-duration: 200ms;
+    --default-transition-timing-function: var(--ease-fluid);
+}
 
 @layer base {
     html {
-        content-visibility: auto;
-        contain-intrinsic-size: 1000px;
+        color-scheme: light dark;
+        scroll-behavior: smooth;
+        /* animate to/from height:auto, max-content, etc. */
+        interpolate-size: allow-keywords;
     }
 
     body {
-        text-rendering: optimizeLegibility;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        font-feature-settings: "cv11", "ss01";
     }
 
-    a:hover {
-        background: linear-gradient(to right, var(--color-ctp-rosewater), var(--color-ctp-mauve-200));
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
+    h1,
+    h2,
+    h3 {
+        text-wrap: balance;
+    }
+
+    p {
+        text-wrap: pretty;
+    }
+
+    ::selection {
+        background-color: color-mix(in oklab, var(--catppuccin-color-overlay2) 50%, transparent);
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--catppuccin-color-lavender);
+        outline-offset: 2px;
+    }
+
+    ::view-transition-new(.animated-item):only-child {
+        animation: fade-in 150ms;
+    }
+
+    ::view-transition-old(.animated-item):only-child {
+        animation: fade-out 150ms;
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--catppuccin-color-mantle);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--catppuccin-color-surface1);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--catppuccin-color-surface2);
+    }
+
+    * {
+        scrollbar-color: var(--catppuccin-color-surface1) var(--catppuccin-color-mantle);
+        scrollbar-width: thin;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms;
+            animation-iteration-count: 1;
+            transition-duration: 0.01ms;
+            scroll-behavior: auto;
+        }
+
+        /* `*` doesn't match view-transition pseudos */
+        ::view-transition-old(root),
+        ::view-transition-new(root) {
+            animation-duration: 0.01ms;
+        }
     }
 }
 
-@theme {
-    --font-sans: "Inter", sans-serif;
-    --font-mono: "JetBrains Mono", monospace;
+@utility defer-paint {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 1000px;
+}
 
-    --text-muted: var(--color-ctp-subtext1);
+@utility corner-lines {
+    --corner-line-alpha: 30%;
+    --corner-line-width: 3px;
 
-    --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
+    background-image:
+        linear-gradient(
+            110deg,
+            transparent 0 16vmin,
+            color-mix(in oklab, var(--catppuccin-color-red-300) var(--corner-line-alpha), transparent) 16vmin
+                calc(16vmin + var(--corner-line-width)),
+            transparent calc(16vmin + var(--corner-line-width)) 20vmin,
+            color-mix(in oklab, var(--catppuccin-color-peach-300) var(--corner-line-alpha), transparent)
+                20vmin calc(20vmin + var(--corner-line-width)),
+            transparent calc(20vmin + var(--corner-line-width)) 24vmin,
+            color-mix(in oklab, var(--catppuccin-color-yellow-300) var(--corner-line-alpha), transparent)
+                24vmin calc(24vmin + var(--corner-line-width)),
+            transparent calc(24vmin + var(--corner-line-width)) 28vmin,
+            color-mix(in oklab, var(--catppuccin-color-green-300) var(--corner-line-alpha), transparent)
+                28vmin calc(28vmin + var(--corner-line-width)),
+            transparent calc(28vmin + var(--corner-line-width)) 32vmin
+        ),
+        linear-gradient(
+            290deg,
+            transparent 0 16vmin,
+            color-mix(in oklab, var(--catppuccin-color-red-300) var(--corner-line-alpha), transparent) 16vmin
+                calc(16vmin + var(--corner-line-width)),
+            transparent calc(16vmin + var(--corner-line-width)) 20vmin,
+            color-mix(in oklab, var(--catppuccin-color-peach-300) var(--corner-line-alpha), transparent)
+                20vmin calc(20vmin + var(--corner-line-width)),
+            transparent calc(20vmin + var(--corner-line-width)) 24vmin,
+            color-mix(in oklab, var(--catppuccin-color-yellow-300) var(--corner-line-alpha), transparent)
+                24vmin calc(24vmin + var(--corner-line-width)),
+            transparent calc(24vmin + var(--corner-line-width)) 28vmin,
+            color-mix(in oklab, var(--catppuccin-color-green-300) var(--corner-line-alpha), transparent)
+                28vmin calc(28vmin + var(--corner-line-width)),
+            transparent calc(28vmin + var(--corner-line-width)) 32vmin
+        );
+    background-position:
+        top left,
+        bottom right;
+    background-size: 85vmin 85vmin;
+    background-repeat: no-repeat;
+}
+
+@utility prose-catppuccin {
+    @apply prose;
+
+    & {
+        --tw-prose-body: var(--catppuccin-color-text);
+        --tw-prose-headings: var(--catppuccin-color-lavender-300);
+        --tw-prose-lead: var(--catppuccin-color-subtext1);
+        --tw-prose-links: var(--catppuccin-color-sapphire);
+        --tw-prose-bold: var(--catppuccin-color-text);
+        --tw-prose-counters: var(--catppuccin-color-overlay1);
+        --tw-prose-bullets: var(--catppuccin-color-overlay1);
+        --tw-prose-hr: var(--catppuccin-color-surface2);
+        --tw-prose-quotes: var(--catppuccin-color-subtext0);
+        --tw-prose-quote-borders: var(--catppuccin-color-surface2);
+        --tw-prose-captions: var(--catppuccin-color-overlay2);
+        --tw-prose-code: var(--catppuccin-color-blue-400);
+        --tw-prose-pre-code: var(--catppuccin-color-text);
+        --tw-prose-pre-bg: var(--catppuccin-color-mantle);
+        --tw-prose-th-borders: var(--catppuccin-color-surface2);
+        --tw-prose-td-borders: var(--catppuccin-color-surface1);
+    }
+
+    & h2 {
+        color: var(--catppuccin-color-blue-400);
+        padding-bottom: 0.3em;
+        border-bottom: 1px solid var(--catppuccin-color-surface1);
+    }
+
+    & :is(h1, h2, h3, h4) {
+        scroll-margin-top: 5rem;
+        letter-spacing: -0.011em;
+    }
+
+    & a.anchor {
+        opacity: 0;
+        margin-left: 0.35rem;
+        color: var(--catppuccin-color-overlay1);
+        text-decoration: none;
+        transition: opacity var(--default-transition-duration) var(--ease-fluid);
+    }
+
+    & a.anchor::after {
+        content: "#";
+    }
+
+    & :is(h1, h2, h3, h4):hover a.anchor,
+    & a.anchor:focus-visible {
+        opacity: 1;
+    }
+
+    & code {
+        @apply font-mono;
+    }
+
+    & code > * {
+        @apply font-mono;
+        /* biome-ignore lint/complexity/noImportantStyles: Override built-in inline styles */
+        font-style: normal !important;
+    }
+
+    & code::before,
+    & code::after {
+        content: "";
+    }
+
+    & :not(pre) > code {
+        padding: 0.15em 0.4em;
+        font-size: 0.875em;
+        font-weight: 500;
+        background-color: var(--catppuccin-color-base);
+    }
+
+    & pre {
+        padding: 0;
+        margin-block: 1.75em;
+        overflow: hidden;
+        tab-size: 4;
+        border-radius: 0;
+    }
+
+    & pre[lang]::before {
+        content: attr(lang);
+        display: block;
+        padding: 0.45rem 1.15rem;
+        font-size: 0.7rem;
+        color: var(--catppuccin-color-overlay1);
+        background-color: var(--catppuccin-color-crust);
+        border-bottom: 1px solid var(--catppuccin-color-surface1);
+        @apply font-mono;
+    }
+
+    & pre > code {
+        display: block;
+        overflow-x: auto;
+        padding: 1.1rem 1.25rem;
+        background-color: transparent;
+        font-weight: 400;
+    }
+
+    & blockquote {
+        border-left-width: 3px;
+        padding: 0.25rem 1.25rem;
+        font-style: normal;
+        background-color: var(--catppuccin-color-surface1);
+    }
+
+    & blockquote p:first-of-type::before,
+    & blockquote p:last-of-type::after {
+        content: "";
+    }
+
+    & .markdown-alert {
+        --alert-color: var(--catppuccin-color-blue);
+
+        margin-block: 1.5em;
+        padding: 0.9rem 1.15rem;
+        border-left: 3px solid var(--alert-color);
+        background-color: var(--alert-color);
+    }
+
+    & .markdown-alert-tip {
+        --alert-color: var(--catppuccin-color-green);
+    }
+
+    & .markdown-alert-important {
+        --alert-color: var(--catppuccin-color-mauve);
+    }
+
+    & .markdown-alert-warning {
+        --alert-color: var(--catppuccin-color-yellow);
+    }
+
+    & .markdown-alert-caution {
+        --alert-color: var(--catppuccin-color-red);
+    }
+
+    & .markdown-alert-title {
+        margin: 0 0 0.35rem;
+        color: var(--alert-color);
+        font-weight: 600;
+    }
+
+    & .markdown-alert > :last-child {
+        margin-bottom: 0;
+    }
+
+    & table {
+        width: 100%;
+        font-size: 0.9em;
+        border: 1px solid var(--catppuccin-color-surface1);
+        border-spacing: 0;
+        overflow: hidden;
+    }
+
+    & :is(th, td) {
+        padding: 0.55rem 0.85rem;
+    }
+
+    & thead th {
+        background-color: var(--catppuccin-color-surface1);
+    }
+
+    & tbody tr:nth-child(even) {
+        background-color: var(--catppuccin-color-surface0);
+    }
+
+    & img {
+        border: 1px solid var(--catppuccin-color-surface1);
+    }
+
+    & hr {
+        border: 0;
+        height: 1px;
+        background: var(--catppuccin-color-surface2);
+    }
+
+    & li:has(> input[type="checkbox"]) {
+        list-style: none;
+        margin-left: -1.4em;
+    }
+
+    & input[type="checkbox"] {
+        accent-color: var(--catppuccin-color-lavender);
+        margin-right: 0.4em;
+    }
+
+    & section.footnotes {
+        margin-top: 3rem;
+        padding-top: 1rem;
+        font-size: 0.875em;
+        color: var(--catppuccin-color-subtext0);
+        border-top: 1px solid var(--catppuccin-color-surface1);
+    }
 }
