@@ -1,0 +1,16 @@
+{
+    "name": "contracts",
+    "version": "0.0.0",
+    "private": true,
+    "scripts": {
+        "build": "tsp compile main.tsp --emit=@typespec/openapi3 && pnpm generate:ts && pnpm generate:rs",
+        "generate:ts": "openapi-generator-cli generate -i ./tsp-output/@typespec/openapi3/openapi.yaml -g typescript-fetch -o ../../apps/web/src/generated/ --additional-properties=typescriptThreePlus=true",
+        "generate:rs": "openapi-generator-cli generate -i ./tsp-output/@typespec/openapi3/openapi.yaml -g rust -o ./rust/ --global-property modelDocs=false,apiDocs=false --additional-properties=packageName=blog-contracts"
+    },
+    "dependencies": {
+        "@typespec/compiler": "^1.15.0",
+        "@typespec/http": "^1.15.0",
+        "@typespec/openapi3": "^1.15.0",
+        "@openapitools/openapi-generator-cli": "^2.40.1"
+    }
+}
