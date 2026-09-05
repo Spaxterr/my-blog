@@ -1,0 +1,6 @@
+disallowed-methods = [
+    "std::env::temp_dir", # Use a more secure alternative if needed
+]
+
+# Allow some common patterns that are technically lints
+msrv = "1.75.0"
