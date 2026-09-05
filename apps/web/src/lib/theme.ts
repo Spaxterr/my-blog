@@ -1,6 +1,6 @@
 import { createContextId, type Signal } from '@builder.io/qwik';
 import type { Cookie } from '@builder.io/qwik-city';
-import type { Theme as ApiTheme } from '~/generated';
+import type { Theme as ApiTheme } from '@shared/contracts';
 
 export const THEMES = {
     latte: {

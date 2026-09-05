@@ -1,6 +1,6 @@
 import { component$ } from '@builder.io/qwik';
 import { routeLoader$ } from '@builder.io/qwik-city';
-import { PostContentType, ResponseError } from '~/generated';
+import { PostContentType, ResponseError } from '@shared/contracts';
 import { apiClient } from '~/lib/api';
 import { API_THEME, themeFromCookie } from '~/lib/theme';
 
