@@ -17,6 +17,7 @@ fn adapter(theme: Theme) -> &'static SyntectAdapter {
     return ADAPTERS[slot].get_or_init(|| {
         return SyntectAdapterBuilder::new()
             .syntax_set(two_face::syntax::extra_newlines())
+            .theme_set(two_face::theme::extra().into())
             .theme(&format!("Catppuccin {theme}"))
             .build();
     });
