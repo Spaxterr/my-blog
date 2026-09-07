@@ -152,6 +152,7 @@
 
 @utility prose-catppuccin {
     @apply prose;
+    @apply font-sans;
 
     & {
         --tw-prose-body: var(--catppuccin-color-text);
@@ -206,6 +207,7 @@
 
     & code > * {
         @apply font-mono;
+        @apply font-semibold;
         /* biome-ignore lint/complexity/noImportantStyles: Override built-in inline styles */
         font-style: normal !important;
     }
@@ -237,7 +239,6 @@
         font-size: 0.7rem;
         color: var(--catppuccin-color-overlay1);
         background-color: var(--catppuccin-color-crust);
-        border-bottom: 1px solid var(--catppuccin-color-surface1);
         @apply font-mono;
     }
 
@@ -296,43 +297,12 @@
         margin-bottom: 0;
     }
 
-    & table {
-        width: 100%;
-        font-size: 0.9em;
-        border: 1px solid var(--catppuccin-color-surface1);
-        border-spacing: 0;
-        overflow: hidden;
-    }
-
-    & :is(th, td) {
-        padding: 0.55rem 0.85rem;
-    }
-
-    & thead th {
-        background-color: var(--catppuccin-color-surface1);
-    }
-
-    & tbody tr:nth-child(even) {
-        background-color: var(--catppuccin-color-surface0);
-    }
-
-    & img {
-        border: 1px solid var(--catppuccin-color-surface1);
-    }
-
-    & hr {
-        border: 0;
-        height: 1px;
-        background: var(--catppuccin-color-surface2);
-    }
-
     & li:has(> input[type="checkbox"]) {
         list-style: none;
         margin-left: -1.4em;
     }
 
     & input[type="checkbox"] {
-        accent-color: var(--catppuccin-color-lavender);
         margin-right: 0.4em;
     }
 
@@ -340,7 +310,6 @@
         margin-top: 3rem;
         padding-top: 1rem;
         font-size: 0.875em;
-        color: var(--catppuccin-color-subtext0);
         border-top: 1px solid var(--catppuccin-color-surface1);
     }
 }
