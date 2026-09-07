@@ -3,9 +3,9 @@
     "version": "0.0.0",
     "private": true,
     "scripts": {
-        "build": "tsp compile main.tsp --emit=@typespec/openapi3 && pnpm generate:ts && pnpm generate:rs",
-        "generate:ts": "openapi-generator-cli generate -i ./tsp-output/@typespec/openapi3/openapi.yaml -g typescript-fetch -o ./typescript/ --additional-properties=typescriptThreePlus=true",
-        "generate:rs": "openapi-generator-cli generate -i ./tsp-output/@typespec/openapi3/openapi.yaml -g rust -o ./rust/ --global-property modelDocs=false,apiDocs=false --additional-properties=packageName=blog-contracts"
+        "build": "tsp compile main.tsp --emit=@typespec/openapi3 --option @typespec/openapi3.file-type=json && pnpm generate:ts && pnpm generate:rs",
+        "generate:ts": "openapi-generator-cli generate -i ./tsp-output/@typespec/openapi3/openapi.json -g typescript-fetch -o ./typescript/ --additional-properties=typescriptThreePlus=true",
+        "generate:rs": "openapi-generator-cli generate -i ./tsp-output/@typespec/openapi3/openapi.json -g rust -o ./rust/ --global-property modelDocs=false,apiDocs=false --additional-properties=packageName=blog-contracts"
     },
     "exports": {
         ".": "./typescript/index.ts"
