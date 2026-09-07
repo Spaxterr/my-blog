@@ -18,7 +18,7 @@ export default component$(() => {
                             {cat}
                         </code>
                     </pre>
-                    <h1 class="text-5xl text-center md:text-left md:text-4xl font-bold tracking-tight flex flex-row items-center gap-x-2 bg-linear-120 from-ctp-peach via-ctp-red to-ctp-mauve-800 bg-clip-text text-transparent">
+                    <h1 class="w-max flex flex-row text-5xl text-center md:text-left md:text-4xl font-bold tracking-tight items-center gap-x-2 bg-linear-120 from-ctp-peach via-ctp-red to-ctp-mauve-800 bg-clip-text text-transparent">
                         Hi, I'm Kevin
                     </h1>
                     <div class="flex flex-row gap-x-3 items-center justify-center md:justify-start text-sm text-ctp-text/50">
