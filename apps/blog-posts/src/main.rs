@@ -1,5 +1,6 @@
 mod handlers;
 mod services;
+mod validation;
 
 use axum::{
     Router,
@@ -27,7 +28,7 @@ async fn main() {
         .route("/posts", post(handlers::posts::create_post_handler))
         .route("/posts/{id}", get(handlers::posts::get_post_handler))
         .route("/docs", get(handlers::docs::docs_handler))
-        .route("/openapi.yaml", get(handlers::docs::openapi_handler))
+        .route("/openapi.json", get(handlers::docs::openapi_handler))
         .with_state(pool);
 
     let listener = tokio::net::TcpListener::bind(&host)

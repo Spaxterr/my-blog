@@ -28,10 +28,17 @@ model Post {
     created_at: int64;
 }
 
+/** Represents a blog post without content, instead containing a summary. */
+model SummarizedPost {
+    ...OmitProperties<Post, "content">;
+    summary: string;
+}
+
 model CreatePostPayload {
-    title: string;
-    content: string;
-    tags: string[];
+    @minLength(1) @maxLength(200) title: string;
+    @minLength(1) @maxLength(100000) content: string;
+    @minLength(1) @maxLength(1000) summary: string;
+    @maxItems(20) tags: Array<string>;
 }
 
 // -- Routes
@@ -40,9 +47,13 @@ model CreatePostPayload {
 interface Posts {
     @get listPosts(@query q?: string): {
         @statusCode code: 200;
-        @body posts: Post[];
+        @body posts: SummarizedPost[];
     };
-    @get getPost(@path id: string, @query content_type: PostContentType, @query theme: Theme): {
+    @get getPost(
+        @path @format("uuid") id: string,
+        @query content_type: PostContentType,
+        @query theme: Theme,
+    ): {
         @statusCode code: 200;
         @body post: Post;
     };

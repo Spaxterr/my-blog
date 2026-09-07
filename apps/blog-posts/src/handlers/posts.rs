@@ -6,9 +6,12 @@ use axum::{
 };
 use blog_contracts::models::{CreatePostPayload, PostContentType, Theme};
 use serde::Deserialize;
+use serde_json::Value;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 use crate::services::{blog, markdown::to_html};
+use crate::validation;
 
 #[derive(Deserialize)]
 pub struct SearchQuery {
@@ -23,20 +26,29 @@ pub struct GetPostQuery {
 
 pub async fn create_post_handler(
     State(pool): State<PgPool>,
-    Json(payload): Json<CreatePostPayload>,
-) -> Result<impl IntoResponse, StatusCode> {
+    Json(body): Json<Value>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    validation::check(&validation::CREATE_POST_PAYLOAD, &body)
+        .map_err(|message| return (StatusCode::BAD_REQUEST, message))?;
+
+    let payload: CreatePostPayload = serde_json::from_value(body)
+        .map_err(|e| return (StatusCode::BAD_REQUEST, e.to_string()))?;
+
     return match blog::create_post(&pool, &payload).await {
         Ok(()) => Ok(StatusCode::CREATED),
         Err(e) => {
             eprint!("Failed to create post: {e}");
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to create post".to_owned(),
+            ));
         }
     };
 }
 
 pub async fn get_post_handler(
     State(pool): State<PgPool>,
-    Path(id): Path<String>,
+    Path(id): Path<Uuid>,
     Query(query): Query<GetPostQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let mut blog_post = match blog::get_post(&pool, &id).await {
