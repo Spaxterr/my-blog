@@ -11,6 +11,9 @@
         "lint": {
             "dependsOn": ["^lint"]
         },
+        "lint:staged": {
+            "cache": false
+        },
         "format": {
             "dependsOn": ["^format"]
         },

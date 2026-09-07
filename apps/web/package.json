@@ -17,6 +17,7 @@
         "dev": "vite --mode ssr",
         "format": "biome check --write",
         "lint": "biome check",
+        "lint:staged": "biome check --staged --no-errors-on-unmatched",
         "test": "vitest",
         "qwik": "qwik"
     },
