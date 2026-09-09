@@ -1,1 +1,3 @@
+command -v gitleaks >/dev/null && gitleaks protect --staged --redact --verbose
+
 pnpm turbo run lint:staged
