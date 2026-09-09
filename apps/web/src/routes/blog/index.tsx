@@ -1,5 +1,5 @@
 import { component$ } from '@builder.io/qwik';
-import { Link, routeLoader$, useLocation, useNavigate } from '@builder.io/qwik-city';
+import { Link, routeLoader$, useLocation } from '@builder.io/qwik-city';
 import Search from '~/components/search/search';
 import { apiClient } from '~/lib/api';
 import SharpCircleIcon from '~icons/ic/sharp-circle';

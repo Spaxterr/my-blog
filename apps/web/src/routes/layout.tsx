@@ -1,9 +1,22 @@
 import { component$, isServer, Slot, useContextProvider, useSignal, useTask$ } from '@builder.io/qwik';
 import { routeLoader$, useNavigate } from '@builder.io/qwik-city';
 import { NavBar } from '~/components/navbar/navbar';
+import { authClient } from '~/lib/auth';
 import { ThemeContext, themeFromCookie } from '~/lib/theme';
 
 export const useInitialTheme = routeLoader$((event) => themeFromCookie(event.cookie));
+
+export const useAuthSession = routeLoader$(async (event) => {
+    const { data } = await authClient.getSession({
+        fetchOptions: {
+            headers: {
+                cookie: event.request.headers.get('cookie') || '',
+            },
+        },
+    });
+
+    return data;
+});
 
 export default component$(() => {
     const initialTheme = useInitialTheme();

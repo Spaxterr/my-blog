@@ -8,6 +8,6 @@
         "test": "cargo test",
         "lint": "cargo clippy",
         "lint:staged": "git diff --cached --name-only --relative -- '*.rs' Cargo.toml | grep -q . && cargo clippy || true",
-        "format": "cargo clippy --fix"
+        "format": "cargo clippy --fix --allow-dirty"
     }
 }
