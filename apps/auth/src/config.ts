@@ -10,6 +10,7 @@ export interface AppConfig {
     githubClientId: string;
     githubClientSecret: string;
     loggingLevel: pino.Level;
+    secret: string;
 }
 
 export async function getConfig(): Promise<AppConfig> {
@@ -21,6 +22,7 @@ export async function getConfig(): Promise<AppConfig> {
         githubClientId: await readSecret('GITHUB_CLIENT_ID', true),
         githubClientSecret: await readSecret('GITHUB_CLIENT_SECRET', true),
         loggingLevel: ((await readSecret('LOG_LEVEL')) ?? 'info') as pino.Level,
+        secret: await readSecret('SECRET', true),
     };
 }
 
