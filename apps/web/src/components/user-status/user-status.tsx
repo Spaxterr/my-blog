@@ -1,5 +1,6 @@
 import { component$, useSignal } from '@builder.io/qwik';
-import { useNavigate } from '@builder.io/qwik-city';
+import { Link } from '@builder.io/qwik-city';
+import { Modal } from '@qwik-ui/headless';
 import type { User } from 'better-auth';
 import { authClient } from '~/lib/auth';
 import SharpLogoutIcon from '~icons/ic/sharp-logout';
@@ -10,7 +11,6 @@ interface Props {
 }
 
 export const UserStatus = component$<Props>(({ user }) => {
-    const navigate = useNavigate();
     const loggingOut = useSignal<boolean>(false);
 
     return (
@@ -28,21 +28,45 @@ export const UserStatus = component$<Props>(({ user }) => {
                     <SharpPersonIcon class="text-ctp-subtext0" />
                 </span>
             )}
-            <span>{user.name}</span>
-            <button
-                type="button"
-                title="Log out"
-                disabled={loggingOut.value}
-                class={`hover:cursor-pointer ${loggingOut.value ? 'opacity-30' : ''}`}
-                onClick$={async () => {
-                    loggingOut.value = true;
-                    await authClient.signOut();
-                    loggingOut.value = false;
-                    navigate();
-                }}
-            >
-                <SharpLogoutIcon />
-            </button>
+            <Link href="/profile/">{user.name}</Link>
+            <Modal.Root class="flex flex-row gap-x-2 items-center">
+                <Modal.Trigger
+                    class={`hover:cursor-pointer hover:text-ctp-mauve-400 ${loggingOut.value ? 'opacity-30' : ''}`}
+                    title="Log out"
+                >
+                    <div>
+                        <SharpLogoutIcon />
+                    </div>
+                </Modal.Trigger>
+                <Modal.Panel class="modal-panel shadow-sm shadow-black/20">
+                    <Modal.Title>Log Out?</Modal.Title>
+                    <Modal.Description>
+                        Please confirm that you want to sign out of your account.
+                    </Modal.Description>
+                    <div class="flex flex-row gap-x-1 justify-end">
+                        <Modal.Close class="modal-close button-secondary">Cancel</Modal.Close>
+                        <Modal.Close
+                            class="modal-close button-primary"
+                            onClick$={async () => {
+                                loggingOut.value = true;
+                                await authClient.signOut({
+                                    fetchOptions: {
+                                        onSuccess: () => {
+                                            loggingOut.value = false;
+                                            location.reload();
+                                        },
+                                        onError: () => {
+                                            loggingOut.value = false;
+                                        },
+                                    },
+                                });
+                            }}
+                        >
+                            Log Out
+                        </Modal.Close>
+                    </div>
+                </Modal.Panel>
+            </Modal.Root>
         </div>
     );
 });

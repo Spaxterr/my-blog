@@ -99,6 +99,47 @@
             animation-duration: 0.01ms;
         }
     }
+
+    .modal-panel {
+        padding: 1rem;
+        gap: 0.5rem;
+        color: oklch(from var(--catppuccin-color-text) l c h);
+        background-color: oklch(from var(--catppuccin-color-mantle) l c h);
+        max-width: 28rem;
+        width: 33%;
+        overflow: hidden;
+        margin: auto;
+    }
+
+    .modal-panel::backdrop {
+        @apply backdrop-blur-xs;
+        @apply bg-ctp-crust/30;
+    }
+
+    .modal-panel > * {
+        padding-block: 0.5rem;
+    }
+
+    .modal-panel h2 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        padding: 0;
+    }
+
+    .modal-panel button {
+        padding: 0.5rem;
+        border-radius: calc(var(--border-radius));
+        border: 2px dotted oklch(from var(--muted) l c h);
+    }
+
+    .modal-panel .modal-alert-close {
+        position: absolute;
+        top: 0;
+        right: 0.5rem;
+        transform: scale(3) rotate(45deg);
+        border: none;
+        outline: none;
+    }
 }
 
 @utility defer-paint {
@@ -148,6 +189,33 @@
         bottom right;
     background-size: 85vmin 85vmin;
     background-repeat: no-repeat;
+}
+
+@utility button-primary {
+    @apply text-base;
+    @apply px-2 py-1;
+    @apply bg-ctp-mauve;
+    @apply hover:bg-ctp-mauve-300 hover:cursor-pointer;
+    @apply text-ctp-base;
+    @apply disabled:opacity-70;
+}
+
+@utility button-secondary {
+    @apply text-base;
+    @apply px-2 py-1;
+    @apply bg-ctp-surface1;
+    @apply hover:bg-ctp-surface2 hover:cursor-pointer;
+    @apply text-ctp-text;
+    @apply disabled:opacity-70;
+}
+
+@utility button-danger {
+    @apply text-base;
+    @apply px-2 py-1;
+    @apply bg-ctp-red;
+    @apply hover:bg-ctp-surface2 hover:cursor-pointer;
+    @apply text-ctp-base;
+    @apply disabled:opacity-70;
 }
 
 @utility prose-catppuccin {
