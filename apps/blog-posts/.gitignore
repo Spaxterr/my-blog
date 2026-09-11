@@ -5,3 +5,6 @@ target
 **/mutants.out*/
 rustc-ice-*.txt
 .idea/
+.env
+.env.*
+!.env.example

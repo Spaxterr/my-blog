@@ -1,6 +1,7 @@
 mod handlers;
 mod services;
 mod validation;
+mod secrets;
 
 use axum::{
     Router,
@@ -8,12 +9,15 @@ use axum::{
 };
 use sqlx::postgres::PgPoolOptions;
 
+use crate::secrets::read_secret;
+
 #[tokio::main]
 async fn main() {
-    dotenvy::dotenv().expect("Failed to load env vars");
+    dotenvy::dotenv().ok();
 
-    let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let host = std::env::var("HOST").expect("HOST must be set");
+    let db_url = read_secret("DATABASE_URL").expect("DATABASE_URL is not set");
+    let host = read_secret("HOST").expect("HOST is not set");
+    let auth_server_host = read_secret("AUTH_HOST").expect("AUTH_HOST is not set");
 
     println!("Connecting to Postgres...");
     let pool = PgPoolOptions::new()

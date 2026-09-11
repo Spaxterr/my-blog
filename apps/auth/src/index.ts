@@ -1,25 +1,18 @@
 import { serve } from '@hono/node-server';
-import dotenv from 'dotenv';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import pino from 'pino';
-import { setupAuth } from './auth.js';
-import { getConfig } from './config.js';
-
-dotenv.config();
-
-const appConfig = await getConfig();
+import { appConfig, auth } from './auth.config.js';
 
 const app = new Hono();
 const logger = pino({
     level: appConfig.loggingLevel,
 });
-export const auth = setupAuth(appConfig);
 
 app.use(
     '/api/auth/*',
     cors({
-        origin: 'http://localhost:5173',
+        origin: process.env.WEB_HOST ?? 'http://localhost:5173',
         credentials: true,
         allowHeaders: ['Content-Type', 'Authorization'],
         allowMethods: ['GET', 'POST', 'OPTIONS'],
