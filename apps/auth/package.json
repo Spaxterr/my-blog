@@ -9,7 +9,7 @@
     "scripts": {
         "dev": "tsx watch src/index.ts",
         "build": "tsc",
-        "migrate": "pnpm dlx auth@latest migrate -c src/index.ts",
+        "migrate": "pnpm dlx @better-auth/cli@latest migrate -y -c src/auth.config.ts",
         "lint": "biome check",
         "format": "biome check --write",
         "lint:staged": "biome check --staged --no-errors-on-unmatched",
