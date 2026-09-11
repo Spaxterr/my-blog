@@ -26,6 +26,13 @@ async fn main() {
         .await
         .expect("Failed to connect to Postgres");
 
+    // ponytail: embedded + idempotent, takes a pg advisory lock so replicas can't race
+    println!("Running migrations...");
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to run migrations");
+
     println!("Registering routes...");
     let app = Router::new()
         .route("/posts", get(handlers::posts::get_all_posts_handler))
