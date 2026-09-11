@@ -7,7 +7,6 @@
     },
     "linter": {
         "domains": {
-            "qwik": "recommended",
             "tailwind": "recommended",
             "project": "recommended",
             "test": "recommended"
