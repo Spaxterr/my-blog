@@ -1,4 +1,5 @@
 import { component$ } from '@builder.io/qwik';
+import { Modal } from '@qwik-ui/headless';
 import { authClient } from '~/lib/auth';
 import { useAuthSession } from '../layout';
 

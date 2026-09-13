@@ -1,12 +1,11 @@
 services:
   postgres:
-    image: postgres:18-alpine
+    image: paradedb/paradedb:pg18
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-      # Only applied when the pgdata volume is first initialised.
       POSTGRES_DB: my_blog
     secrets: [postgres_password]
-    volumes: [pgdata:/var/lib/postgresql/data]
+    volumes: [pgdata:/var/lib/postgresql]
     deploy:
       placement:
         constraints: [node.role == manager]
