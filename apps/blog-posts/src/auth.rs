@@ -93,7 +93,6 @@ pub async fn require_admin(
     next: Next,
 ) -> Result<Response, StatusCode> {
     let session = get_session(&auth, req.headers()).await?;
-    println!("{:?}", session);
     if !is_admin(session.user.role) {
         return Err(StatusCode::FORBIDDEN);
     }
