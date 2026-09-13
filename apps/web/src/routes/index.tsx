@@ -14,7 +14,7 @@ export default component$(() => {
             <div class="flex flex-1 flex-col items-center justify-center">
                 <section class="flex flex-col gap-4 bg-ctp-base dark:bg-ctp-surface0 p-8 relative">
                     <pre class="flex items-center md:flex-none md:absolute md:right-12 md:top-5 overflow-visible whitespace-pre ">
-                        <code class="mx-auto md:mx-0 text-sm font-mono font-light bg-linear-120 from-ctp-peach via-ctp-red-400 to-ctp-mauve-900 bg-clip-text text-transparent">
+                        <code class="mx-auto md:mx-0 text-sm font-mono font-medium bg-linear-120 from-ctp-peach via-ctp-red-400 to-ctp-mauve-900 bg-clip-text text-transparent">
                             {cat}
                         </code>
                     </pre>
@@ -33,7 +33,7 @@ export default component$(() => {
                         I'm a software developer with over 8 years of experience in building web applications,
                         video game addons, developer tooling and cybersecurity solutions.
                     </p>
-                    <span class="text-ctp-text/70 border-l-2 border-l-ctp-surface2 p-2">
+                    <span class="text-ctp-surface2 border-l-2 border-l-ctp-surface2 p-2">
                         “An idiot admires complexity, a genius admires simplicity" - Terry A. Davis
                     </span>
                     <div class="mt-2 flex flex-wrap gap-3"></div>

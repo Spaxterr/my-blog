@@ -28,23 +28,36 @@ export default component$(() => {
                 <ul class="grid grid-cols-1 font-mono">
                     <li>ID: {userSession.value.user.id}</li>
                     <li>Created: {userSession.value.user.createdAt.toLocaleDateString()}</li>
+                    <li>Role: {userSession.value.user.role ?? 'None'}</li>
                 </ul>
                 <div>
-                    <button
-                        type="button"
-                        class="button-danger"
-                        onClick$={async () => {
-                            await authClient.deleteUser({
-                                fetchOptions: {
-                                    onSuccess: () => {
-                                        location.reload();
-                                    },
-                                },
-                            });
-                        }}
-                    >
-                        Delete Account
-                    </button>
+                    <Modal.Root>
+                        <Modal.Trigger class="button-danger">Delete Account</Modal.Trigger>
+                        <Modal.Panel class="modal-panel shadow-sm shadow-black/20">
+                            <Modal.Title>Delete Account</Modal.Title>
+                            <Modal.Description>
+                                Deleting your account will remove all associated data and is non-reversable.
+                                Signing in again will create a new account.
+                            </Modal.Description>
+                            <div class="flex flex-row gap-x-1 justify-end">
+                                <Modal.Close class="modal-close button-secondary">Cancel</Modal.Close>
+                                <Modal.Close
+                                    class="modal-close button-danger"
+                                    onClick$={async () => {
+                                        await authClient.deleteUser({
+                                            fetchOptions: {
+                                                onSuccess: () => {
+                                                    location.reload();
+                                                },
+                                            },
+                                        });
+                                    }}
+                                >
+                                    Delete Account
+                                </Modal.Close>
+                            </div>
+                        </Modal.Panel>
+                    </Modal.Root>
                 </div>
             </div>
         </div>
