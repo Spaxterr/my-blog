@@ -1,7 +1,7 @@
 import { createHash, randomUUIDv7 } from 'node:crypto';
 import { redisStorage } from '@better-auth/redis-storage';
-import { betterAuth } from 'better-auth';
-import { bearer } from 'better-auth/plugins';
+import { type BetterAuthPlugin, betterAuth } from 'better-auth';
+import { admin, bearer, openAPI } from 'better-auth/plugins';
 import { Redis } from 'ioredis';
 import { Pool } from 'pg';
 import type { AppConfig } from './config.js';
@@ -11,6 +11,11 @@ const hashEmail = (profile: { email?: string | null }) => ({
         .update(profile.email ?? '')
         .digest('hex')}@invalid`,
 });
+
+const plugins: BetterAuthPlugin[] = [bearer(), admin()];
+if (process.env.NODE_ENV === 'development') {
+    plugins.push(openAPI());
+}
 
 export function setupAuth(config: AppConfig) {
     const redis = new Redis(config.redisUrl);
@@ -51,7 +56,7 @@ export function setupAuth(config: AppConfig) {
             client: redis,
             keyPrefix: 'better-auth:',
         }),
-        plugins: [bearer()],
+        plugins: plugins,
     });
 
     return auth;

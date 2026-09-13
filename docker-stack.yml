@@ -46,8 +46,6 @@ services:
   blog-posts:
     image: ${IMAGE_PREFIX:-my-blog}/blog-posts:${TAG:-latest}
     environment:
-      # Internal overlay-network names are identical in every environment, so
-      # they stay literal — only the public origins are per-environment.
       HOST: 0.0.0.0:3000
       AUTH_HOST: http://auth:3001
     secrets:

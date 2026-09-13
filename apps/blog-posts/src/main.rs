@@ -1,15 +1,19 @@
+mod auth;
 mod handlers;
+mod secrets;
 mod services;
 mod validation;
-mod secrets;
 
 use axum::{
-    Router,
+    Router, middleware,
     routing::{get, post},
 };
-use sqlx::postgres::PgPoolOptions;
+use sqlx::{PgPool, postgres::PgPoolOptions};
 
-use crate::secrets::read_secret;
+use crate::{
+    auth::AuthClient,
+    secrets::read_secret,
+};
 
 #[tokio::main]
 async fn main() {
@@ -19,6 +23,8 @@ async fn main() {
     let host = read_secret("HOST").expect("HOST is not set");
     let auth_server_host = read_secret("AUTH_HOST").expect("AUTH_HOST is not set");
 
+    let auth_client = AuthClient::new(auth_server_host);
+
     println!("Connecting to Postgres...");
     let pool = PgPoolOptions::new()
         .max_connections(10)
@@ -26,7 +32,6 @@ async fn main() {
         .await
         .expect("Failed to connect to Postgres");
 
-    // ponytail: embedded + idempotent, takes a pg advisory lock so replicas can't race
     println!("Running migrations...");
     sqlx::migrate!("./migrations")
         .run(&pool)
@@ -34,12 +39,20 @@ async fn main() {
         .expect("Failed to run migrations");
 
     println!("Registering routes...");
+
+    let admin_routes: Router<PgPool> = Router::new()
+        .route("/posts", post(handlers::posts::create_post_handler))
+        .route_layer(middleware::from_fn_with_state(
+            auth_client,
+            auth::require_admin,
+        ));
+
     let app = Router::new()
         .route("/posts", get(handlers::posts::get_all_posts_handler))
-        .route("/posts", post(handlers::posts::create_post_handler))
         .route("/posts/{id}", get(handlers::posts::get_post_handler))
         .route("/docs", get(handlers::docs::docs_handler))
         .route("/openapi.json", get(handlers::docs::openapi_handler))
+        .merge(admin_routes)
         .with_state(pool);
 
     let listener = tokio::net::TcpListener::bind(&host)

@@ -7,15 +7,20 @@ import { ThemeContext, themeFromCookie } from '~/lib/theme';
 export const useInitialTheme = routeLoader$((event) => themeFromCookie(event.cookie));
 
 export const useAuthSession = routeLoader$(async (event) => {
-    const { data } = await authClient.getSession({
-        fetchOptions: {
-            headers: {
-                cookie: event.request.headers.get('cookie') || '',
+    try {
+        const { data } = await authClient.getSession({
+            fetchOptions: {
+                headers: {
+                    cookie: event.request.headers.get('cookie') || '',
+                },
             },
-        },
-    });
+        });
 
-    return data;
+        return data;
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
 });
 
 export default component$(() => {
