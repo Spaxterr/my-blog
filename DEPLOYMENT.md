@@ -25,8 +25,8 @@ $EDITOR .env
 
 | Variable | Default | Effect |
 |---|---|---|
-| `AUTH_ORIGIN` | *required* | Public auth URL. Must resolve from a browser **and** from inside the `web` container. |
-| `WEB_ORIGIN` | *required* | Public web URL. Becomes `auth`'s CORS allowlist. |
+| `AUTH_ORIGIN` | *required* | Public auth URL, as a **browser** sees it. Also `auth`'s own base URL, from which OAuth redirect URIs are derived. |
+| `WEB_ORIGIN` | *required* | Public web URL. Becomes `auth`'s CORS allowlist and trusted origin. |
 | `WEB_PORT` | `80` | Published port for `web`. |
 | `AUTH_PORT` | `3001` | Published port for `auth`. |
 | `IMAGE_PREFIX` | `my-blog` | Registry path for multi-node; leave as-is for one node. |
@@ -39,13 +39,26 @@ $EDITOR .env
 For a local deploy:
 
 ```
-AUTH_ORIGIN=http://localhost:3001
-WEB_ORIGIN=http://localhost:8080
-WEB_PORT=8080
+AUTH_ORIGIN=http://127.0.0.1:3001
+WEB_ORIGIN=http://127.0.0.1:3004
+WEB_PORT=3004
 ```
+
+**Use `127.0.0.1`, not `localhost`.** Swarm's published ports are IPv4-only, and
+on a machine where `localhost` resolves to `::1` every request to it hangs —
+browser included. Check with `getent hosts localhost`; if it returns only `::1`,
+`localhost` will not work here.
 
 `.env` is gitignored and holds no credentials. A missing `AUTH_ORIGIN` or
 `WEB_ORIGIN` aborts the deploy naming the variable.
+
+The public origins are only half the picture: the `web` container also renders
+server-side, and inside the overlay network a public origin may not resolve (on
+a local deploy `localhost:3001` is the web container itself). So SSR uses
+`AUTH_INTERNAL_HOST` (`http://auth:3001`, a literal in `docker-stack.yml`) while
+the browser gets `AUTH_ORIGIN` from a `<meta name="auth-host">` tag. Same for
+`BLOG_POSTS_HOST`. Internal names never vary between environments, so they are
+not knobs.
 
 ## 3. Create secrets
 
@@ -110,7 +123,15 @@ returns only metadata.
 | `auth_github_client_id` | GitHub OAuth app |
 | `auth_github_client_secret` | GitHub OAuth app |
 
-Set the OAuth apps' callback URLs to `$AUTH_ORIGIN/api/auth/callback/<provider>`.
+Set the OAuth apps' callback URLs to `$AUTH_ORIGIN/api/auth/callback/<provider>`
+— e.g. `http://127.0.0.1:3001/api/auth/callback/github`. They must match exactly
+or login fails at the provider. Confirm what `auth` actually sends:
+
+```bash
+curl -s -o /dev/null -D- -X POST $AUTH_ORIGIN/api/auth/sign-in/social \
+  -H 'Content-Type: application/json' -d '{"provider":"github","callbackURL":"/"}' \
+  | grep -i '^location' | grep -o 'redirect_uri=[^&]*'
+```
 
 The `my_blog` database is created by `POSTGRES_DB` on first startup only. If the
 `pgdata` volume already exists, create it by hand:
@@ -149,19 +170,51 @@ On **later** deploys, migrate first:
 
 `blog-posts` migrates itself on startup, so it needs nothing here.
 
+The job runs `node dist/migrate.js`, which calls better-auth's `getMigrations()`
+from the copy already in the image. It does not install anything at runtime, so
+it works offline and cannot drift. It is idempotent — a second run prints
+`auth schema already up to date`.
+
+After `auth`'s schema is created for the first time, restart it so it stops
+reporting a schema mismatch:
+
+```bash
+docker service update --force my-blog_auth
+```
+
 Updates use `start-first`: the new task must be running before the old one is
 killed, so both versions serve briefly. Keep migrations backwards-compatible
 with the previous image for one deploy.
 
 ## 6. Verify
 
+The commands below use `$WEB_ORIGIN` / `$AUTH_ORIGIN`, so load `.env` first.
+Note the `./` — zsh's `.` does not search the current directory:
+
+```bash
+set -a; . ./.env; set +a
+```
+
 ```bash
 docker stack services my-blog                 # all replicas n/n
 docker service ps my-blog_web --no-trunc      # failure reasons if not
 docker service logs -f my-blog_auth
 curl -f $WEB_ORIGIN
-curl -f $AUTH_ORIGIN/api/auth/ok
+curl -f $AUTH_ORIGIN/api/auth/ok                      # {"ok":true}
+curl -s $AUTH_ORIGIN/api/auth/get-session             # null when logged out
+curl -sL -o /dev/null -w '%{http_code}\n' $WEB_ORIGIN/blog   # exercises blog-posts
 ```
+
+Confirm the auth tables exist:
+
+```bash
+docker exec $(docker ps -qf name=my-blog_postgres) \
+  psql -U postgres -d my_blog -tAc \
+  "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY 1;"
+```
+
+Expect `account`, `blog_posts`, `user`, `_sqlx_migrations`. Sessions live in
+Redis, so there is no `session` table.
 
 No service declares a healthcheck, so `n/n` means the process started, not that
 it works. Open the site in a browser and check the console — all auth calls are
@@ -201,8 +254,10 @@ loses the database.
 - **No healthchecks**, so `start-first` can promote a task that cannot serve.
 - **`blog-posts` requires `AUTH_HOST` but never reads it** (`main.rs:20`). It is
   set in the stack only because the service panics without it.
-- **`web` calls `AUTH_ORIGIN` during SSR**, so that hostname must be reachable
-  from inside the container, TLS included — not just from browsers. This is
-  deliberate: better-auth needs the browser-facing origin for valid cookies.
 - Serve both origins over TLS in production. Cross-origin auth cookies over
   plain HTTP will not survive a real browser.
+- **An existing `pgdata` volume from a pre-18 layout will not start.** Postgres
+  18 stores data in a major-version subdirectory and wants the volume at
+  `/var/lib/postgresql`; a volume mounted at the old `/var/lib/postgresql/data`
+  makes the container exit 1. The stack uses the new path. Migrating real data
+  across that change needs `pg_upgrade`, not a mount edit.

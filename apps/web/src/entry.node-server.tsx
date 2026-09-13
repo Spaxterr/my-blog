@@ -2,7 +2,10 @@ import { createServer } from 'node:http';
 import { getRequestEvent } from '@builder.io/qwik-city';
 import { createQwikCity } from '@builder.io/qwik-city/middleware/node';
 import qwikCityPlan from '@qwik-city-plan';
+import dotenv from 'dotenv';
 import render from './entry.ssr';
+
+dotenv.config();
 
 const PORT = process.env.PORT ?? 3004;
 

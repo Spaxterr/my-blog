@@ -12,7 +12,7 @@ const logger = pino({
 app.use(
     '/api/auth/*',
     cors({
-        origin: process.env.WEB_HOST ?? 'http://localhost:5173',
+        origin: appConfig.webOrigin,
         credentials: true,
         allowHeaders: ['Content-Type', 'Authorization'],
         allowMethods: ['GET', 'POST', 'OPTIONS'],

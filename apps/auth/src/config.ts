@@ -11,6 +11,8 @@ export interface AppConfig {
     githubClientSecret: string;
     loggingLevel: pino.Level;
     secret: string;
+    baseUrl: string;
+    webOrigin: string;
 }
 
 export async function getConfig(): Promise<AppConfig> {
@@ -23,6 +25,8 @@ export async function getConfig(): Promise<AppConfig> {
         githubClientSecret: await readSecret('GITHUB_CLIENT_SECRET', true),
         loggingLevel: ((await readSecret('LOG_LEVEL')) ?? 'info') as pino.Level,
         secret: await readSecret('SECRET', true),
+        baseUrl: (await readSecret('BETTER_AUTH_URL')) || 'http://localhost:3001',
+        webOrigin: (await readSecret('WEB_HOST')) || 'http://localhost:5173',
     };
 }
 

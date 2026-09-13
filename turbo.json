@@ -2,7 +2,7 @@
     "$schema": "https://turborepo.dev/schema.json",
     "ui": "tui",
     "globalEnv": ["BASE_URL"],
-    "globalPassThroughEnv": ["PORT", "AUTH_HOST", "BLOG_POSTS_HOST"],
+    "globalPassThroughEnv": ["PORT", "AUTH_HOST", "AUTH_INTERNAL_HOST", "BLOG_POSTS_HOST"],
     "tasks": {
         "build": {
             "dependsOn": ["^build"],

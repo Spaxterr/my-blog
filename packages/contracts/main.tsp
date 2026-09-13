@@ -57,7 +57,7 @@ interface Posts {
         @statusCode code: 200;
         @body post: Post;
     };
-    @post @useAuth(BearerAuth) createPost(@body payload: CreatePostPayload): {
+    @useAuth(BearerAuth) @post createPost(@body payload: CreatePostPayload): {
         @statusCode code: 201;
     };
 }

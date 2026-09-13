@@ -16,14 +16,13 @@ export function setupAuth(config: AppConfig) {
     const redis = new Redis(config.redisUrl);
 
     const auth = betterAuth({
-        baseURL: 'http://localhost:3001',
-        trustedOrigins: ['http://localhost:5173'],
+        baseURL: config.baseUrl,
+        trustedOrigins: [config.webOrigin],
         socialProviders: {
             discord: {
                 clientId: config.discordClientId,
                 clientSecret: config.discordClientSecret,
                 mapProfileToUser: hashEmail,
-                // ponytail: default redirectURI (baseURL + /api/auth/callback/discord) is the correct one
             },
             github: {
                 clientId: config.githubClientId,
