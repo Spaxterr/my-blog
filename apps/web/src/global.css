@@ -44,6 +44,10 @@
         text-wrap: pretty;
     }
 
+    a:hover {
+        color: var(--catppuccin-color-mauve);
+    }
+
     ::selection {
         background-color: color-mix(in oklab, var(--catppuccin-color-overlay2) 50%, transparent);
     }

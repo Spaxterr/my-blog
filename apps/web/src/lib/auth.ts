@@ -23,6 +23,6 @@ export const authClient = createAuthClient({
     plugins: [jwtClient(), adminClient()],
 });
 
-export function isAdmin(session: { role?: string | undefined | null }): boolean {
-    return session.role === ADMIN_ROLE_NAME;
+export function isAdmin(session: { role?: string | undefined | null } | undefined): boolean {
+    return session?.role === ADMIN_ROLE_NAME;
 }
