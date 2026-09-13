@@ -7,9 +7,9 @@
         "node": ">=26.1.0"
     },
     "scripts": {
-        "dev": "tsx watch src/index.ts",
+        "dev": "NODE_ENV=development tsx watch src/index.ts",
         "build": "tsc",
-        "migrate": "pnpm dlx @better-auth/cli@latest migrate -y -c src/auth.config.ts",
+        "migrate": "node dist/migrate.js",
         "lint": "biome check",
         "format": "biome check --write",
         "lint:staged": "biome check --staged --no-errors-on-unmatched",

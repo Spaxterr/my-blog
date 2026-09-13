@@ -1,5 +1,7 @@
 FROM ghcr.io/pnpm/pnpm:12 AS base
 
+ENV NODE_ENV="production"
+
 RUN pnpm runtime set node 26 -g
 WORKDIR /app
 COPY . .
