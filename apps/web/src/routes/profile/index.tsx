@@ -37,7 +37,7 @@ export default component$(() => {
                         <Modal.Panel class="modal-panel shadow-sm shadow-black/20">
                             <Modal.Title>Delete Account</Modal.Title>
                             <Modal.Description>
-                                Deleting your account will remove all associated data and is non-reversable.
+                                Deleting your account will remove all associated data and is non-reversible.
                                 Signing in again will create a new account.
                             </Modal.Description>
                             <div class="flex flex-row gap-x-1 justify-end">

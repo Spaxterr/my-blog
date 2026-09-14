@@ -20,5 +20,7 @@ export const TopLoader = component$(() => {
         cleanup(() => clearTimeout(t));
     });
 
-    return <div class={['top-loader', state.value]} role="progressbar" aria-hidden={state.value === 'idle'} />;
+    return (
+        <div class={['top-loader', state.value]} role="progressbar" aria-hidden={state.value === 'idle'} />
+    );
 });
