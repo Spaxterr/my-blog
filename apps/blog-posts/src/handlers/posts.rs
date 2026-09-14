@@ -4,7 +4,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use blog_contracts::models::{CreatePostPayload, PostContentType, Theme};
+use blog_contracts::models::{CreatePostPayload, PostContentType, SummarizedPost, Theme};
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::PgPool;
@@ -16,6 +16,8 @@ use crate::validation;
 #[derive(Deserialize)]
 pub struct SearchQuery {
     pub q: Option<String>,
+    pub page: Option<i32>,
+    pub count: Option<i32>,
 }
 
 #[derive(Deserialize)]
@@ -79,24 +81,31 @@ pub async fn get_all_posts_handler(
     State(pool): State<PgPool>,
     Query(q): Query<SearchQuery>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    match q.q {
+    let page = q.page.unwrap_or(1);
+    let count = q.count.unwrap_or(20);
+
+    let res = match q.q {
         Some(search_term) => {
-            return match blog::search_posts(&pool, &search_term).await {
-                Ok(result) => Ok(Json(result)),
-                Err(e) => {
-                    eprint!("Failed to get all blog posts: {e}");
-                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
-                }
-            };
+            tokio::try_join!(
+                blog::search_posts(&pool, &search_term, page, count),
+                blog::count_posts(&pool)
+            )
         }
         None => {
-            return match blog::get_all_posts(&pool).await {
-                Ok(result) => Ok(Json(result)),
-                Err(e) => {
-                    eprint!("Failed to get all blog posts: {e}");
-                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
-                }
-            };
+            tokio::try_join!(
+                blog::get_all_posts(&pool, page, count),
+                blog::count_posts(&pool)
+            )
+        }
+    };
+
+    match res {
+        Ok((posts, total)) => {
+            return Ok(([("X-Total-Posts", total.to_string())], Json(posts)));
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }
 }

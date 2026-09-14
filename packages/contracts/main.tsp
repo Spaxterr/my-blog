@@ -45,9 +45,18 @@ model CreatePostPayload {
 
 @route("/posts")
 interface Posts {
-    @get listPosts(@query q?: string): {
+    @get listPosts(
+        @query q?: string,
+        @query @minValue(1) page: int32,
+
+        @query
+        @minValue(1)
+        @maxValue(100)
+        count: int32,
+    ): {
         @statusCode code: 200;
         @body posts: SummarizedPost[];
+        @header `X-Total-Posts`: int32;
     };
     @get getPost(
         @path @format("uuid") id: string,
@@ -57,7 +66,10 @@ interface Posts {
         @statusCode code: 200;
         @body post: Post;
     };
-    @useAuth(BearerAuth) @post createPost(@header contentType: "application/json", @body payload: CreatePostPayload): {
+    @useAuth(BearerAuth) @post createPost(
+        @header contentType: "application/json",
+        @body payload: CreatePostPayload,
+    ): {
         @statusCode code: 201;
     };
 }

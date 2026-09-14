@@ -1,18 +1,30 @@
 import { component$ } from '@builder.io/qwik';
-import { Link, routeLoader$, useLocation } from '@builder.io/qwik-city';
+import { Link, routeLoader$, useLocation, useNavigate } from '@builder.io/qwik-city';
+import { Pagination } from '@qwik-ui/headless';
 import Search from '~/components/search/search';
 import { apiClient } from '~/lib/api';
 import SharpCircleIcon from '~icons/ic/sharp-circle';
+import SharpKeyboardArrowLeftIcon from '~icons/ic/sharp-keyboard-arrow-left';
+import SharpKeyboardArrowRightIcon from '~icons/ic/sharp-keyboard-arrow-right';
 
 export const useBlogPosts = routeLoader$(async (e) => {
     const q = e.url.searchParams.get('q');
-    const resp = await apiClient.postsListPosts({ q: q ? encodeURIComponent(q) : undefined });
-    return resp;
+    const page = Number(e.url.searchParams.get('page')) || 1;
+    const count = Number(e.url.searchParams.get('count')) || 4;
+
+    const resp = await apiClient.postsListPostsRaw({ q: q ? encodeURIComponent(q) : undefined, count, page });
+
+    return { posts: await resp.value(), total: resp.raw.headers.get('X-Total-Posts') };
 });
 
 export default component$(() => {
     const posts = useBlogPosts();
-    const q = useLocation().url.searchParams.get('q') ?? undefined;
+    const location = useLocation();
+    const nav = useNavigate();
+    const q = location.url.searchParams.get('q') || undefined;
+    const page = Number(location.url.searchParams.get('page')) || 1;
+    const count = Number(location.url.searchParams.get('count')) || 4;
+    const totalPages = Math.max(1, Math.ceil(Number(posts.value?.total ?? 0) / count));
 
     return (
         <div class="flex flex-col w-full gap-y-8">
@@ -21,7 +33,7 @@ export default component$(() => {
             </h1>
             <Search value={q} />
             <div class="flex flex-col w-full gap-y-4">
-                {posts.value?.map((p) => {
+                {posts.value?.posts.map((p) => {
                     return (
                         <Link
                             href={`/blog/${p.id}`}
@@ -53,6 +65,32 @@ export default component$(() => {
                         </Link>
                     );
                 })}
+                <div class="mx-auto">
+                    {totalPages > 1 && (
+                        <Pagination
+                            selectedPage={page}
+                            totalPages={totalPages}
+                            onPageChange$={(newPage: number) => {
+                                const url = new URL(location.url);
+                                url.searchParams.set('page', newPage.toString());
+                                nav(url.pathname + url.search);
+                            }}
+                            customArrowTexts={{ previous: '', next: '' }}
+                            class="pagination-wrapper flex flex-row gap-x-2 items-center justify-start w-full"
+                            selectedClass="text-ctp-mauve border border-ctp-mauve px-1"
+                            defaultClass="hover:text-ctp-mauve-700 px-1 cursor-pointer"
+                            prevButtonClass="hover:text-ctp-mauve-700 cursor-pointer px-2 font-bold"
+                            nextButtonClass="hover:text-ctp-mauve-700 cursor-pointer px-2 font-bold"
+                        >
+                            <span q:slot="prefix">
+                                <SharpKeyboardArrowLeftIcon />
+                            </span>
+                            <span q:slot="suffix">
+                                <SharpKeyboardArrowRightIcon />
+                            </span>
+                        </Pagination>
+                    )}
+                </div>
             </div>
         </div>
     );
