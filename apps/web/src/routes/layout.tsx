@@ -1,6 +1,7 @@
 import { component$, isServer, Slot, useContextProvider, useSignal, useTask$ } from '@builder.io/qwik';
 import { routeLoader$, useNavigate } from '@builder.io/qwik-city';
 import { NavBar } from '~/components/navbar/navbar';
+import { TopLoader } from '~/components/toploader/toploader';
 import { authClient } from '~/lib/auth';
 import { ThemeContext, themeFromCookie } from '~/lib/theme';
 
@@ -56,6 +57,7 @@ export default component$(() => {
                 'corner-lines',
             ]}
         >
+            <TopLoader />
             <NavBar />
             <main class="mx-auto flex w-full max-w-4xl md:max-w-6xl flex-1 flex-col px-4 py-10 sm:py-14 animated-item">
                 <Slot />

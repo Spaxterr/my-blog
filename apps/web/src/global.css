@@ -385,3 +385,45 @@
         border-top: 1px solid var(--catppuccin-color-surface1);
     }
 }
+
+.top-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    height: 0.4svh;
+    width: 0;
+    opacity: 0;
+    background: var(--catppuccin-color-mauve);
+    pointer-events: none;
+}
+
+.top-loader.loading {
+    opacity: 1;
+    animation: top-loader-grow 10s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+.top-loader.done {
+    width: 100%;
+    opacity: 0;
+    transition:
+        width 0.15s ease-out,
+        opacity 0.25s 0.15s ease-out;
+}
+
+@keyframes top-loader-grow {
+    0% {
+        width: 0;
+    }
+
+    100% {
+        width: 90%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .top-loader {
+        transition: none;
+        animation: none;
+    }
+}
