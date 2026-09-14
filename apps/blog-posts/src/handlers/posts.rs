@@ -4,7 +4,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use blog_contracts::models::{CreatePostPayload, PostContentType, SummarizedPost, Theme};
+use blog_contracts::models::{CreatePostPayload, PostContentType, Theme};
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::PgPool;
