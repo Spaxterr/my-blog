@@ -5,12 +5,12 @@ load_env
 
 # The images are environment-agnostic — every hostname is read at runtime — so
 # the environment only decides where they are tagged and pushed.
-for s in auth web blog-posts; do
+for s in auth web blog-posts caddy; do
   docker build -f "apps/$s/Dockerfile" -t "$IMAGE_PREFIX/$s:$TAG" .
 done
 
 if [ "${PUSH:-0}" = "1" ]; then
-  for s in auth web blog-posts; do
+  for s in auth web blog-posts caddy; do
     docker push "$IMAGE_PREFIX/$s:$TAG"
   done
 fi

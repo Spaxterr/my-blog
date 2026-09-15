@@ -33,8 +33,10 @@ export default component$(() => {
                         I'm a software developer with over 8 years of experience in building web applications,
                         video game addons, developer tooling and cybersecurity solutions.
                     </p>
-                    <span class="text-ctp-surface2 border-l-2 border-l-ctp-surface2 p-2">
-                        “An idiot admires complexity, a genius admires simplicity" - Terry A. Davis
+                    <span class="text-ctp-subtext0/70 border-l-2 border-l-ctp-surface2 p-2 max-w-3xl">
+                        "There are only two types of companies: those that have been hacked, and those that
+                        will be."
+                        <br />- Robert Mueller - FBI Director 2012
                     </span>
                     <div class="mt-2 flex flex-wrap gap-3"></div>
                 </section>
