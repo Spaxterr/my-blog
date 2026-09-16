@@ -1,9 +1,9 @@
 {
     "$schema": "https://json.schemastore.org/web-manifest-combined.json",
-    "name": "qwik-project-name",
-    "short_name": "Welcome to Qwik",
+    "name": "kevin-personal-developer-blog",
+    "short_name": "Kevin Personal Developer Blog",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#fff",
-    "description": "A Qwik project app."
+    "background_color": "#414559",
+    "description": "Personal website and developer blog of Kevin from Sweden"
 }

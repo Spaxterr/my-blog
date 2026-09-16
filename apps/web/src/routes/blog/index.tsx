@@ -1,5 +1,5 @@
 import { component$ } from '@builder.io/qwik';
-import { Link, routeLoader$, useLocation, useNavigate } from '@builder.io/qwik-city';
+import { type DocumentHead, Link, routeLoader$, useLocation, useNavigate } from '@builder.io/qwik-city';
 import { Pagination } from '@qwik-ui/headless';
 import Search from '~/components/search/search';
 import { apiClient } from '~/lib/api';
@@ -95,3 +95,14 @@ export default component$(() => {
         </div>
     );
 });
+
+export const head: DocumentHead = {
+    title: 'Kevin | Blog Posts',
+    meta: [
+        {
+            name: 'description',
+            content:
+                'Personal website of Kevin, a software developer with over 8 years of experience in building web apps, cybersecurity solutions and developer tools.',
+        },
+    ],
+};

@@ -10,7 +10,6 @@ export default component$(() => {
         <QwikCityProvider>
             <head>
                 <meta charset="utf-8" />
-                {/* How the browser learns the auth origin — see DEPLOYMENT.md */}
                 <meta name="auth-host" content={publicAuthHost()} />
                 {!isDev && <link rel="manifest" href={`${import.meta.env.BASE_URL}manifest.json`} />}
                 <RouterHead />
