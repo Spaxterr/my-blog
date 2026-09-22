@@ -6,6 +6,14 @@ using TypeSpec.Http;
 @service(#{ title: "Blog API" })
 namespace BlogApi;
 
+@format("uuid")
+scalar uuid extends string;
+
+@doc("A 6-digit hex color code.")
+@pattern("^#([0-9a-fA-F]{6})$", "Must be a valid 6-digit hex code.")
+@example("#3b82f6")
+scalar HexColor extends string;
+
 // -- Models
 
 enum PostContentType {
@@ -21,11 +29,23 @@ enum Theme {
 }
 
 model Post {
-    id: string;
+    id: uuid;
     title: string;
     content: string;
-    tags: string[];
+    tags: Tag[];
+    category: string;
     created_at: int64;
+}
+
+model Tag {
+    id: uuid;
+    label: string;
+    color: HexColor;
+}
+
+model Category {
+    id: uuid;
+    name: string;
 }
 
 /** Represents a blog post without content, instead containing a summary. */
@@ -38,7 +58,12 @@ model CreatePostPayload {
     @minLength(1) @maxLength(200) title: string;
     @minLength(1) @maxLength(100000) content: string;
     @minLength(1) @maxLength(1000) summary: string;
-    @maxItems(20) tags: Array<string>;
+    @minLength(1) @maxLength(1000) category: string;
+    @maxItems(20) tags: Array<uuid>;
+}
+
+model CreateTagPayload {
+    ...OmitProperties<Tag, "id">;
 }
 
 // -- Routes
@@ -69,6 +94,21 @@ interface Posts {
     @useAuth(BearerAuth) @post createPost(
         @header contentType: "application/json",
         @body payload: CreatePostPayload,
+    ): {
+        @statusCode code: 201;
+    };
+}
+
+@route("/tags")
+interface Tags {
+    @get listTags(@query q?: string): {
+        @statusCode code: 200;
+        @body tags: Array<Tag>;
+    };
+
+    @useAuth(BearerAuth) @post createTag(
+        @header contentType: "application/json",
+        @body payload: CreateTagPayload,
     ): {
         @statusCode code: 201;
     };

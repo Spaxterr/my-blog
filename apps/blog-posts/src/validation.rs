@@ -19,6 +19,9 @@ fn validator_for(schema_name: &str) -> Validator {
 pub static CREATE_POST_PAYLOAD: LazyLock<Validator> =
     LazyLock::new(|| return validator_for("CreatePostPayload"));
 
+pub static CREATE_TAG_PAYLOAD: LazyLock<Validator> =
+    LazyLock::new(|| return validator_for("CreateTagPayload"));
+
 pub fn check(validator: &Validator, body: &Value) -> Result<(), String> {
     let errors: Vec<String> = validator
         .iter_errors(body)

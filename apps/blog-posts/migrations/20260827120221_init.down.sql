@@ -1,3 +1,5 @@
--- Add down migration script here
-DROP INDEX IF EXISTS blog_posts.search_idxIF EXISTS ;
+DROP INDEX IF EXISTS search_idx;
+DROP TABLE IF EXISTS blog_post_tags;
+DROP TABLE IF EXISTS tags;
 DROP TABLE IF EXISTS blog_posts;
+DROP TABLE IF EXISTS categories;

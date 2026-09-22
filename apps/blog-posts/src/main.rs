@@ -10,10 +10,7 @@ use axum::{
 };
 use sqlx::{PgPool, postgres::PgPoolOptions};
 
-use crate::{
-    auth::AuthClient,
-    secrets::read_secret,
-};
+use crate::{auth::AuthClient, secrets::read_secret};
 
 #[tokio::main]
 async fn main() {
@@ -42,6 +39,7 @@ async fn main() {
 
     let admin_routes: Router<PgPool> = Router::new()
         .route("/posts", post(handlers::posts::create_post_handler))
+        .route("/tags", post(handlers::tags::create_tag_handler))
         .route_layer(middleware::from_fn_with_state(
             auth_client,
             auth::require_admin,
@@ -50,6 +48,7 @@ async fn main() {
     let app = Router::new()
         .route("/posts", get(handlers::posts::get_all_posts_handler))
         .route("/posts/{id}", get(handlers::posts::get_post_handler))
+        .route("/tags", get(handlers::tags::get_all_tags_handler))
         .route("/docs", get(handlers::docs::docs_handler))
         .route("/openapi.json", get(handlers::docs::openapi_handler))
         .merge(admin_routes)

@@ -1,40 +1,23 @@
 {
 	email {$ACME_EMAIL:admin@example.com}
+    order rate_limit before basicauth
 }
 
-(common) {
-	encode zstd gzip
-	request_body {
-		max_size 5MB
-	}
-	header {
-		-Server
-		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-		X-Content-Type-Options nosniff
-		X-Frame-Options DENY
-		Referrer-Policy strict-origin-when-cross-origin
-		Cross-Origin-Opener-Policy same-origin
-		Permissions-Policy "camera=(), microphone=(), geolocation=()"
-	}
-}
+import snippets/*.caddy
 
 {$DOMAIN_NAME} {
-	import common
+	import headers
+    import tarpit
+    import qwik_optimizations
 
 	# Qwik emits content-hashed filenames under these two paths only.
 	@immutable path /build/* /assets/*
 	header @immutable Cache-Control "public, max-age=31536000, immutable"
 
-	# auth lives under the web origin on purpose: its session cookie is host-only,
-	# so on a separate auth.<domain> it never reaches web's SSR cookie header and
-	# every routeLoader$/routeAction$ sees a logged-out user.
 	handle /api/auth/* {
 		reverse_proxy auth:3001
 	}
 
-	# handle_path strips the prefix, so blog-posts keeps serving /posts and
-	# /openapi.json at its own root and needs no route changes. Reads are public;
-	# POST /posts is admin-gated in blog-posts itself.
 	handle_path /api/blog/* {
 		reverse_proxy blog-posts:3000
 	}

@@ -73,7 +73,7 @@ export const head: DocumentHead = ({ resolveValue, url }) => {
             { name: 'description', content: description },
             { property: 'og:type', content: 'article' },
             { property: 'article:published_time', content: new Date(post.createdAt * 1000).toISOString() },
-            ...post.tags.map((tag) => ({ property: 'article:tag', content: tag })),
+            ...post.tags.map((tag) => ({ property: 'article:tag', content: tag.label })),
         ],
         scripts: [
             {
@@ -84,7 +84,7 @@ export const head: DocumentHead = ({ resolveValue, url }) => {
                     headline: post.title,
                     description,
                     datePublished: new Date(post.createdAt * 1000).toISOString(),
-                    keywords: post.tags,
+                    keywords: post.tags.map((tag) => tag.label),
                     author: { '@type': 'Person', name: 'Kevin' },
                     mainEntityOfPage: url.origin + url.pathname,
                 }),

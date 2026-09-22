@@ -3,4 +3,4 @@ disallowed-methods = [
 ]
 
 # Allow some common patterns that are technically lints
-msrv = "1.85.0"
+msrv = "1.87.0"

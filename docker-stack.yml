@@ -79,10 +79,12 @@ services:
       replicas: ${REPLICAS:-2}
       update_config: { order: start-first }
 
+  miasma:
+    image: austinweeks/miasma:latest
+    command: ["--link-prefix", "/gift-pit", "--max-in-flight", "30"]
+
 volumes:
   pgdata:
-  # Certificates and ACME account keys. Lose this and every cert is re-issued —
-  # Let's Encrypt rate-limits that at 5 per domain per week.
   caddy_data:
   caddy_config:
 

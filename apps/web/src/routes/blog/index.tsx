@@ -13,8 +13,10 @@ export const useBlogPosts = routeLoader$(async (e) => {
     const count = Number(e.url.searchParams.get('count')) || 4;
 
     const resp = await apiClient.postsListPostsRaw({ q: q ? encodeURIComponent(q) : undefined, count, page });
+    const posts = await resp.value();
+    const total = Number(resp.raw.headers.get('X-Total-Posts'));
 
-    return { posts: await resp.value(), total: resp.raw.headers.get('X-Total-Posts') };
+    return { posts: posts, total: total };
 });
 
 export default component$(() => {
@@ -50,13 +52,14 @@ export default component$(() => {
                                     <SharpCircleIcon />
                                 </div>
                                 <div class="flex flex-row gap-x-1 items-center">
-                                    {p.tags.map((tag, i) => {
+                                    {p.tags.map((tag) => {
                                         return (
                                             <div
-                                                class="text-ctp-subtext1 border border-ctp-surface1 py-0.5 px-1 text-xs"
-                                                key={`${i}`}
+                                                class="text-ctp-subtext1 border py-0.5 px-1 text-xs"
+                                                style={{ borderColor: tag.color }}
+                                                key={`${tag.id}`}
                                             >
-                                                {tag}
+                                                {tag.label}
                                             </div>
                                         );
                                     })}

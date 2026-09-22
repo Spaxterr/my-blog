@@ -1,21 +1,37 @@
+CREATE TABLE categories (
+    id uuid NOT NULL PRIMARY KEY,
+    name text NOT NULL UNIQUE
+);
+
 CREATE TABLE blog_posts (
     id uuid NOT NULL PRIMARY KEY,
     title text NOT NULL,
     content text NOT NULL,
     summary text,
-    tags text[],
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    category_id uuid REFERENCES categories(id)
 );
 
--- ponytail: edge_ngram(3,20) so "prog" matches "programming"; index grows ~ per-word
--- prefix count. Swap back to plain text fields + pdb.fuzzy_term(prefix=>true) at query
--- time if index size ever matters more than query simplicity.
+CREATE TABLE tags (
+    id uuid NOT NULL PRIMARY KEY,
+    label text NOT NULL,
+    color text NOT NULL
+);
+
+-- Join Tables
+
+CREATE TABLE blog_post_tags (
+    blog_id uuid REFERENCES blog_posts(id),
+    tag_id uuid REFERENCES tags(id),
+    PRIMARY KEY (blog_id, tag_id)
+);
+
+-- Search index
+
 CREATE INDEX search_idx ON blog_posts
 USING paradedb (
     id,
     (title::pdb.edge_ngram(3,20)),
     (content::pdb.edge_ngram(3,20)),
-    (summary::pdb.edge_ngram(3,20)),
-    (tags::pdb.edge_ngram(3,20))
+    (summary::pdb.edge_ngram(3,20))
 )
 WITH (key_field='id');

@@ -14,12 +14,12 @@ export default component$<Props>(({ theme }) => {
                 <SharpPaletteIcon />
                 <Select.DisplayValue />
             </Select.Trigger>
-            <Select.Popover class="data-open:flex flex-col px-2 bg-ctp-surface0 text-ctp-text w-32">
+            <Select.Popover class="data-open:flex flex-col px-2 bg-ctp-surface0 shadow-sm shadow-ctp-base text-ctp-text w-32">
                 {Object.entries(THEMES).map(([value, label], i) => {
                     return (
                         <Select.Item
                             key={i}
-                            class="flex flex-row gap-x-1 items-center justify-start px-2 py-1 aria-selected:bg-ctp-surface2 relative"
+                            class="flex flex-row gap-x-1 items-center justify-start px-2 py-2 aria-selected:bg-ctp-surface2 relative hover:bg-ctp-surface1 hover:cursor-pointer"
                             value={value}
                         >
                             <div

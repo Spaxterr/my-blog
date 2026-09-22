@@ -1,30 +1,65 @@
-use blog_contracts::models::SummarizedPost;
 use blog_contracts::models::{CreatePostPayload, Post};
+use blog_contracts::models::{SummarizedPost, Tag};
 use sqlx::PgPool;
 use sqlx::Row;
 use sqlx::postgres::PgRow;
-use sqlx::types::time;
+use sqlx::types::Json;
+use uuid::Timestamp;
 
 pub async fn create_post(pool: &PgPool, payload: &CreatePostPayload) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        "INSERT INTO blog_posts (id, title, summary, content, tags) VALUES ((SELECT uuidv7()), $1, $2, $3, $4);",
+    let mut tx = pool
+        .try_begin()
+        .await?
+        .expect("Could not begin transaction");
+
+    // Create category
+    let category = sqlx::query(
+        "INSERT INTO categories (id, name) VALUES ((SELECT uuidv7()), $1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id;",
+    )
+    .bind(&payload.category)
+    .fetch_one(&mut *tx).await?;
+
+    // Create post
+    let post = sqlx::query(
+        "INSERT INTO blog_posts (id, title, summary, content, category_id) VALUES ((SELECT uuidv7()), $1, $2, $3, $4) RETURNING id;",
     )
     .bind(&payload.title)
     .bind(&payload.summary)
     .bind(&payload.content)
-    .bind(&payload.tags)
-    .execute(pool)
-    .await?;
+    .bind(category.get::<uuid::Uuid, &str>("id"))
+    .fetch_one(&mut *tx).await?;
+
+    // Connect tags to post
+    for tag_id in &payload.tags {
+        sqlx::query("INSERT INTO blog_post_tags (blog_id, tag_id) VALUES ($1, $2);")
+            .bind(post.get::<uuid::Uuid, &str>("id"))
+            .bind(tag_id)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    tx.commit().await?;
 
     return Ok(());
 }
 
 pub async fn get_post(pool: &PgPool, blog_id: &uuid::Uuid) -> Result<Option<Post>, sqlx::Error> {
-    let row =
-        sqlx::query("SELECT id, title, content, tags, created_at FROM blog_posts WHERE id = $1")
-            .bind(blog_id)
-            .fetch_optional(pool)
-            .await?;
+    let row = sqlx::query(
+        "SELECT p.id, p.title, p.content, COALESCE(c.name, '') AS category, COALESCE(
+                JSON_AGG(JSON_BUILD_OBJECT('id', t.id, 'label', t.label, 'color', t.color))
+                    FILTER (WHERE t.id IS NOT NULL),
+                '[]'
+            ) AS tags
+        FROM blog_posts p
+        LEFT JOIN categories c ON c.id = p.category_id
+        LEFT JOIN blog_post_tags bt ON bt.blog_id = p.id
+        LEFT JOIN tags t ON t.id = bt.tag_id
+        WHERE p.id = $1
+        GROUP BY p.id, c.name;",
+    )
+    .bind(blog_id)
+    .fetch_optional(pool)
+    .await?;
 
     match row {
         Some(post) => return Ok(Option::from(row_to_post(&post)?)),
@@ -38,7 +73,17 @@ pub async fn get_all_posts(
     count: i32,
 ) -> Result<Vec<SummarizedPost>, sqlx::Error> {
     let rows = sqlx::query(
-        "SELECT id, title, summary, tags, created_at FROM blog_posts ORDER BY created_at DESC LIMIT $1 OFFSET $2;",
+        "SELECT p.id, p.title, p.summary, COALESCE(c.name, '') AS category, COALESCE(
+                JSON_AGG(JSON_BUILD_OBJECT('id', t.id, 'label', t.label, 'color', t.color))
+                    FILTER (WHERE t.id IS NOT NULL),
+                '[]'
+            ) AS tags
+        FROM blog_posts p
+        LEFT JOIN categories c ON c.id = p.category_id
+        LEFT JOIN blog_post_tags bt ON bt.blog_id = p.id
+        LEFT JOIN tags t ON t.id = bt.tag_id
+        GROUP BY p.id, c.name
+        ORDER BY p.id DESC LIMIT $1 OFFSET $2;",
     )
     .bind(count)
     .bind((page - 1) * count)
@@ -67,9 +112,22 @@ pub async fn search_posts(
     count: i32,
 ) -> Result<Vec<SummarizedPost>, sqlx::Error> {
     let records = sqlx::query(
-        "SELECT id, title, summary, tags, created_at, pdb.score(id)
-            FROM blog_posts WHERE title ||| $1 OR content ||| $1 OR summary ||| $1 OR tags ||| $1
-            ORDER BY pdb.score(id) DESC LIMIT $2 OFFSET $3;",
+        "WITH matches AS (
+            SELECT id, title, summary, category_id, pdb.score(id) AS score
+            FROM blog_posts WHERE title ||| $1 OR content ||| $1 OR summary ||| $1
+            ORDER BY score DESC, id DESC LIMIT $2 OFFSET $3
+        )
+        SELECT m.id, m.title, m.summary, COALESCE(c.name, '') AS category, COALESCE(
+                JSON_AGG(JSON_BUILD_OBJECT('id', t.id, 'label', t.label, 'color', t.color))
+                    FILTER (WHERE t.id IS NOT NULL),
+                '[]'
+            ) AS tags
+        FROM matches m
+        LEFT JOIN categories c ON c.id = m.category_id
+        LEFT JOIN blog_post_tags bt ON bt.blog_id = m.id
+        LEFT JOIN tags t ON t.id = bt.tag_id
+        GROUP BY m.id, m.title, m.summary, m.score, c.name
+        ORDER BY m.score DESC, m.id DESC;",
     )
     .bind(search_term)
     .bind(count)
@@ -90,14 +148,18 @@ fn row_to_summarized_post(row: &PgRow) -> Result<SummarizedPost, sqlx::Error> {
     let id: uuid::Uuid = row.try_get("id")?;
     let title: String = row.try_get("title")?;
     let summary: String = row.try_get("summary")?;
-    let tags: Vec<String> = row.try_get("tags")?;
-    let created_at: time::OffsetDateTime = row.try_get("created_at")?;
+    let category: String = row.try_get("category")?;
+    let Json(tags): Json<Vec<Tag>> = row.try_get("tags")?;
+    let created_at: Timestamp = id
+        .get_timestamp()
+        .expect("Could not extract timestamp from uuid"); // Should never happen as long as uuid v7 is used
 
     return Ok(SummarizedPost::new(
-        id.to_string(),
+        id,
         title,
         tags,
-        created_at.unix_timestamp(),
+        category,
+        created_at.to_unix().0.cast_signed(),
         summary,
     ));
 }
@@ -106,14 +168,18 @@ fn row_to_post(row: &PgRow) -> Result<Post, sqlx::Error> {
     let id: uuid::Uuid = row.try_get("id")?;
     let title: String = row.try_get("title")?;
     let content: String = row.try_get("content")?;
-    let tags: Vec<String> = row.try_get("tags")?;
-    let created_at: time::OffsetDateTime = row.try_get("created_at")?;
+    let category: String = row.try_get("category")?;
+    let Json(tags): Json<Vec<Tag>> = row.try_get("tags")?;
+    let created_at: Timestamp = id
+        .get_timestamp()
+        .expect("Could not extract timestamp from uuid"); // Should never happen as long as uuid v7 is used
 
     return Ok(Post::new(
-        id.to_string(),
+        id,
         title,
         content,
         tags,
-        created_at.unix_timestamp(),
+        category,
+        created_at.to_unix().0.cast_signed(),
     ));
 }

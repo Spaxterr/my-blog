@@ -1,9 +1,15 @@
-import { component$ } from '@builder.io/qwik';
+import { component$, useSignal } from '@builder.io/qwik';
 import { Form, routeAction$ } from '@builder.io/qwik-city';
+import { Modal } from '@qwik-ui/headless';
 import { ResponseError } from '@shared/contracts';
+import TagSelect from '~/components/tag-select/tag-select';
 import { apiClient } from '~/lib/api';
 import { isAdmin } from '~/lib/auth';
+import { useCreateTag, useTags } from '~/lib/loaders';
 import { useAuthSession } from '../layout';
+import NoPermission from '../no-permission';
+
+export { useCreateTag, useTags };
 
 export const useCreatePost = routeAction$(async (data, event) => {
     try {
@@ -13,10 +19,8 @@ export const useCreatePost = routeAction$(async (data, event) => {
                     title: String(data.title),
                     summary: String(data.summary),
                     content: String(data.content),
-                    tags: String(data.tags ?? '')
-                        .split(',')
-                        .map((t) => t.trim())
-                        .filter(Boolean),
+                    tags: [data.tags ?? []].flat().map(String).filter(Boolean),
+                    category: 'blog',
                 },
             },
             {
@@ -41,9 +45,14 @@ export const useCreatePost = routeAction$(async (data, event) => {
 export default component$(() => {
     const session = useAuthSession();
     const create = useCreatePost();
+    const tags = useTags();
+    const createTag = useCreateTag();
+    const tagModalOpen = useSignal(false);
+    const newTagLabel = useSignal('');
+    const newTagColor = useSignal('#cba6f7');
 
     if (!session.value || !isAdmin(session.value.user)) {
-        return <div>You do not have permission to view the page.</div>;
+        return <NoPermission />;
     }
 
     return (
@@ -70,14 +79,51 @@ export default component$(() => {
                         class="bg-ctp-base dark:bg-ctp-mantle py-2 px-2 outline-none"
                     />
                 </label>
-                <label class="flex flex-col gap-y-1">
+                <div class="flex flex-col gap-y-1">
                     Tags
-                    <input
-                        name="tags"
-                        placeholder="comma, separated"
-                        class="bg-ctp-base dark:bg-ctp-mantle py-2 px-2 outline-none"
-                    />
-                </label>
+                    <div class="flex flex-row items-baseline gap-x-2">
+                        <TagSelect tags={tags.value} />
+                        <Modal.Root bind:show={tagModalOpen}>
+                            <Modal.Trigger class="button-secondary">New Tag</Modal.Trigger>
+                            <Modal.Panel class="modal-panel shadow-sm shadow-black/20 w-lg">
+                                <Modal.Title>New Tag</Modal.Title>
+                                <input
+                                    bind:value={newTagLabel}
+                                    placeholder="Label"
+                                    class="bg-ctp-base dark:bg-ctp-surface0 py-1 px-1 outline-none"
+                                />
+                                <input
+                                    bind:value={newTagColor}
+                                    type="color"
+                                    class="bg-ctp-base dark:bg-ctp-surface0 py-1 px-1 outline-none"
+                                />
+                                {createTag.value?.errorMessage && (
+                                    <p class="text-ctp-red text-sm">{createTag.value.errorMessage}</p>
+                                )}
+                                <div class="flex flex-row gap-x-1 justify-end">
+                                    <Modal.Close class="modal-close button-secondary">Cancel</Modal.Close>
+                                    <button
+                                        type="button"
+                                        class="button-primary"
+                                        disabled={createTag.isRunning}
+                                        onClick$={async () => {
+                                            if (!newTagLabel.value) return;
+                                            const { value } = await createTag.submit({
+                                                label: newTagLabel.value,
+                                                color: newTagColor.value,
+                                            });
+                                            if (value.failed) return;
+                                            newTagLabel.value = '';
+                                            tagModalOpen.value = false;
+                                        }}
+                                    >
+                                        Submit
+                                    </button>
+                                </div>
+                            </Modal.Panel>
+                        </Modal.Root>
+                    </div>
+                </div>
                 <label class="flex flex-col gap-y-1">
                     Content (Markdown)
                     <textarea
