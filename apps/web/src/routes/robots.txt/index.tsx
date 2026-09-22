@@ -1,10 +1,15 @@
 import type { RequestHandler } from '@builder.io/qwik-city';
 
+const robotsContent = `
+User-agent: *
+Allow: /
+Disallow: /profile
+Disallow: /new-blog
+Disallow: /gift-pit
+Sitemap: {origin}/sitemap.xml
+`;
+
 export const onGet: RequestHandler = ({ url, send }) => {
-    send(
-        new Response(
-            `User-agent: *\nAllow: /\nDisallow: /profile\nDisallow: /new-blog\n\nSitemap: ${url.origin}/sitemap.xml\n`,
-            { headers: { 'Content-Type': 'text/plain' } },
-        ),
-    );
+    const content = robotsContent.replace('{origin}', url.origin);
+    send(new Response(content.trim(), { headers: { 'Content-Type': 'text/plain' } }));
 };

@@ -62,6 +62,22 @@ export default component$(() => {
             <main class="mx-auto flex w-full max-w-4xl md:max-w-6xl flex-1 flex-col px-4 py-10 sm:py-14 animated-item">
                 <Slot />
             </main>
+
+            {/** biome-ignore lint/a11y/noAriaHiddenOnFocusable: Link hidden to humans, leads to scraper tarpit */}
+            {/** biome-ignore lint/a11y/useAnchorContent: Link hidden to humans, leads to scraper tarpit  */}
+            <a
+                href="/gift-pit/entry"
+                aria-hidden="true"
+                style={{
+                    position: 'absolute',
+                    left: '-9999px',
+                    top: '-9999px',
+                    opacity: 0,
+                    pointerEvents: 'none',
+                }}
+            >
+                Gifts
+            </a>
         </div>
     );
 });

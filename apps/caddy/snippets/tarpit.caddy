@@ -1,0 +1,19 @@
+(tarpit_config) {
+    redir /gift-pit /gift-pit/
+
+    @tarpit {
+        path /gift-pit/*
+    }
+
+    rate_limit @tarpit {
+        zone tarpit_limit {
+            key {header.User-Agent}
+            events 5
+            window 5s
+        }
+    }
+
+    handle_path /gift-pit/* {
+        reverse_proxy miasma:9999  # Semicolon removed!
+    }
+}

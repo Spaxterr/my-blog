@@ -1,0 +1,19 @@
+(qwik_optimizations) {
+    # Cache Qwik's hashed assets
+    @immutable path /build/* /assets/*
+    header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+    # Define a matcher for dynamic traffic, excludes Qwik chunks
+    @dynamic {
+        not path /build/* /assets/* /favicon.ico /manifest.json
+    }
+
+    # Only rate-limit dynamic/API traffic to avoid breaking Qwik
+    rate_limit @dynamic {
+        zone global_limit {
+            key {remote_host}
+            events 100
+            window 30s
+        }
+    }
+}
