@@ -4,3 +4,10 @@ node_modules
 **/dist
 **/.env*
 .git
+.github
+.claude
+.husky
+scripts
+**/*.md
+**/server
+**/.vscode
