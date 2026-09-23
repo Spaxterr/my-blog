@@ -60,7 +60,6 @@ export const head: DocumentHead = ({ resolveValue, url }) => {
         return { title: 'Kevin | Post not found', meta: [{ name: 'robots', content: 'noindex' }] };
     }
 
-    // ponytail: tag-strip + truncate is enough for a description; add a real API summary field if it reads badly.
     const description = post.content
         .replace(/<[^>]*>/g, ' ')
         .replace(/\s+/g, ' ')
