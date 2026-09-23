@@ -66,6 +66,10 @@ model CreateTagPayload {
     ...OmitProperties<Tag, "id">;
 }
 
+model CreateCategoryPayload {
+    ...OmitProperties<Category, "id">;
+}
+
 // -- Routes
 
 @route("/posts")
@@ -83,19 +87,25 @@ interface Posts {
         @body posts: SummarizedPost[];
         @header `X-Total-Posts`: int32;
     };
+
     @get getPost(
-        @path @format("uuid") id: string,
+        @path @format("uuid") id: uuid,
         @query content_type: PostContentType,
         @query theme: Theme,
     ): {
         @statusCode code: 200;
         @body post: Post;
     };
+
     @useAuth(BearerAuth) @post createPost(
         @header contentType: "application/json",
         @body payload: CreatePostPayload,
     ): {
         @statusCode code: 201;
+    };
+
+    @useAuth(BearerAuth) @delete deletePost(@path @format("uuid") id: uuid): {
+        @statusCode code: 204;
     };
 }
 
@@ -111,5 +121,30 @@ interface Tags {
         @body payload: CreateTagPayload,
     ): {
         @statusCode code: 201;
+    };
+
+    @useAuth(BearerAuth) @delete deleteTag(@path @format("uuid") id: uuid): {
+        @statusCode code: 204;
+    };
+}
+
+@route("/categories")
+interface Categories {
+    @get listCategories(@query q?: string): {
+        @statusCode code: 200;
+        @body categories: Array<Category>;
+    };
+
+    @useAuth(BearerAuth) @post createCategory(
+        @header contentType: "application/json",
+        @body payload: CreateCategoryPayload,
+    ): {
+        @statusCode code: 201;
+    };
+
+    @useAuth(BearerAuth) @delete deleteCategory(
+        @path @format("uuid") id: uuid,
+    ): {
+        @statusCode code: 204;
     };
 }

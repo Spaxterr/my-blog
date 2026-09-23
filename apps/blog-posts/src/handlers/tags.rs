@@ -1,3 +1,4 @@
+use axum::extract::Path;
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use blog_contracts::models::CreateTagPayload;
 use serde_json::Value;
@@ -27,6 +28,32 @@ pub async fn create_tag_handler(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create tag".to_owned(),
             ));
+        }
+    };
+}
+
+pub async fn get_tag_handler(
+    State(pool): State<PgPool>,
+    Path(id): Path<uuid::Uuid>,
+) -> Result<impl IntoResponse, StatusCode> {
+    return match tags::get_tag(&pool, &id).await {
+        Ok(tag) => tag.map_or(Err(StatusCode::NOT_FOUND), |t| return Ok(Json(t))),
+        Err(e) => {
+            eprintln!("Failed to get tag: {e}");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+}
+
+pub async fn delete_tag_handler(
+    State(pool): State<PgPool>,
+    Path(id): Path<uuid::Uuid>,
+) -> Result<StatusCode, StatusCode> {
+    return match tags::delete_tag(&pool, &id).await {
+        Ok(()) => Ok(StatusCode::NO_CONTENT),
+        Err(e) => {
+            eprintln!("Failed to delete tag: {e}");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
 }

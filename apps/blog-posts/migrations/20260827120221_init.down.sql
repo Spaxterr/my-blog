@@ -1,4 +1,5 @@
 DROP INDEX IF EXISTS search_idx;
+
 DROP TABLE IF EXISTS blog_post_tags;
 DROP TABLE IF EXISTS tags;
 DROP TABLE IF EXISTS blog_posts;

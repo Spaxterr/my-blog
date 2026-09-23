@@ -14,7 +14,7 @@ pub async fn create_post(pool: &PgPool, payload: &CreatePostPayload) -> Result<(
 
     // Create category
     let category = sqlx::query(
-        "INSERT INTO categories (id, name) VALUES ((SELECT uuidv7()), $1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id;",
+        "INSERT INTO categories (id, name) VALUES ((SELECT uuidv7()), $1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name, deleted = false RETURNING id;",
     )
     .bind(&payload.category)
     .fetch_one(&mut *tx).await?;
@@ -51,10 +51,10 @@ pub async fn get_post(pool: &PgPool, blog_id: &uuid::Uuid) -> Result<Option<Post
                 '[]'
             ) AS tags
         FROM blog_posts p
-        LEFT JOIN categories c ON c.id = p.category_id
+        LEFT JOIN categories c ON c.id = p.category_id AND c.deleted = false
         LEFT JOIN blog_post_tags bt ON bt.blog_id = p.id
-        LEFT JOIN tags t ON t.id = bt.tag_id
-        WHERE p.id = $1
+        LEFT JOIN tags t ON t.id = bt.tag_id AND t.deleted = false
+        WHERE p.id = $1 AND p.deleted = false
         GROUP BY p.id, c.name;",
     )
     .bind(blog_id)
@@ -79,9 +79,10 @@ pub async fn get_all_posts(
                 '[]'
             ) AS tags
         FROM blog_posts p
-        LEFT JOIN categories c ON c.id = p.category_id
+        LEFT JOIN categories c ON c.id = p.category_id AND c.deleted = false
         LEFT JOIN blog_post_tags bt ON bt.blog_id = p.id
-        LEFT JOIN tags t ON t.id = bt.tag_id
+        LEFT JOIN tags t ON t.id = bt.tag_id AND t.deleted = false
+        WHERE p.deleted = false
         GROUP BY p.id, c.name
         ORDER BY p.id DESC LIMIT $1 OFFSET $2;",
     )
@@ -100,7 +101,7 @@ pub async fn get_all_posts(
 }
 
 pub async fn count_posts(pool: &PgPool) -> Result<i64, sqlx::Error> {
-    return sqlx::query_scalar("SELECT count(*) FROM blog_posts;")
+    return sqlx::query_scalar("SELECT count(*) FROM blog_posts WHERE deleted = false;")
         .fetch_one(pool)
         .await;
 }
@@ -114,18 +115,19 @@ pub async fn search_posts(
     let records = sqlx::query(
         "WITH matches AS (
             SELECT id, title, summary, category_id, pdb.score(id) AS score
-            FROM blog_posts WHERE title ||| $1 OR content ||| $1 OR summary ||| $1
+            FROM blog_posts
+            WHERE (title ||| $1 OR content ||| $1 OR summary ||| $1) AND deleted = false
             ORDER BY score DESC, id DESC LIMIT $2 OFFSET $3
         )
         SELECT m.id, m.title, m.summary, COALESCE(c.name, '') AS category, COALESCE(
-                JSON_AGG(JSON_BUILD_OBJECT('id', t.id, 'label', t.label, 'color', t.color))
-                    FILTER (WHERE t.id IS NOT NULL),
-                '[]'
-            ) AS tags
+            JSON_AGG(JSON_BUILD_OBJECT('id', t.id, 'label', t.label, 'color', t.color))
+                FILTER (WHERE t.id IS NOT NULL),
+            '[]'
+        ) AS tags
         FROM matches m
-        LEFT JOIN categories c ON c.id = m.category_id
+        LEFT JOIN categories c ON c.id = m.category_id AND c.deleted = false
         LEFT JOIN blog_post_tags bt ON bt.blog_id = m.id
-        LEFT JOIN tags t ON t.id = bt.tag_id
+        LEFT JOIN tags t ON t.id = bt.tag_id AND t.deleted = false
         GROUP BY m.id, m.title, m.summary, m.score, c.name
         ORDER BY m.score DESC, m.id DESC;",
     )
@@ -142,6 +144,15 @@ pub async fn search_posts(
     }
 
     return Ok(posts);
+}
+
+pub async fn delete_post(pool: &PgPool, blog_id: &uuid::Uuid) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE blog_posts SET deleted = true WHERE id = $1")
+        .bind(blog_id)
+        .execute(pool)
+        .await?;
+
+    return Ok(());
 }
 
 fn row_to_summarized_post(row: &PgRow) -> Result<SummarizedPost, sqlx::Error> {

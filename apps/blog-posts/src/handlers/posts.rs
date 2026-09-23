@@ -48,6 +48,19 @@ pub async fn create_post_handler(
     };
 }
 
+pub async fn delete_post_handler(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, StatusCode> {
+    return match blog::delete_post(&pool, &id).await {
+        Ok(()) => Ok(StatusCode::NO_CONTENT),
+        Err(e) => {
+            eprintln!("Failed to delete post: {e}");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+}
+
 pub async fn get_post_handler(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,

@@ -1,6 +1,7 @@
 import { component$, useComputed$, useSignal } from '@builder.io/qwik';
 import { Select } from '@qwik-ui/headless';
 import type { Tag } from '@shared/contracts';
+import { TagDisplay } from '../tag/tag';
 
 interface Props {
     tags: Tag[];
@@ -14,17 +15,16 @@ export default component$<Props>(({ tags }) => {
     });
 
     return (
-        <Select.Root bind:displayValue={displayValue} bind:value={value} multiple loop={true}>
-            <Select.Trigger class="bg-ctp-base dark:bg-ctp-mantle p-2 px-4 hover:cursor-pointer hover:brightness-125 min-w-36 w-full flex flex-row gap-x-1 items-center justify-start">
-                <Select.HiddenNativeSelect multiple name="tags" value={value.value} />
+        <Select.Root name="tags[]" bind:displayValue={displayValue} bind:value={value} multiple loop={true}>
+            <Select.HiddenNativeSelect />
+            <Select.Trigger
+                type="button"
+                class="bg-ctp-base dark:bg-ctp-mantle p-2 px-4 hover:cursor-pointer hover:brightness-125 min-w-36 w-full flex flex-row gap-x-1 items-center justify-start h-8"
+            >
                 <Select.DisplayValue class="text-xs flex flex-row flex-wrap gap-x-1">
                     {selectedTags.value.map((tag) => {
                         if (tag) {
-                            return (
-                                <div key={tag.id} class="p-1 border" style={`border-color: ${tag.color}`}>
-                                    {tag.label}
-                                </div>
-                            );
+                            return <TagDisplay tag={tag} />;
                         } else return null;
                     })}
                 </Select.DisplayValue>

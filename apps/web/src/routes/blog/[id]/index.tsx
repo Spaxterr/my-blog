@@ -2,6 +2,7 @@ import { component$ } from '@builder.io/qwik';
 import { type DocumentHead, routeLoader$ } from '@builder.io/qwik-city';
 import { PostContentType, ResponseError } from '@shared/contracts';
 import { BackButton } from '~/components/back-button/back-button';
+import { TagDisplay } from '~/components/tag/tag';
 import { apiClient } from '~/lib/api';
 import { API_THEME, themeFromCookie } from '~/lib/theme';
 
@@ -36,7 +37,9 @@ export default component$(() => {
 
     return (
         <div class="bg-ctp-mantle dark:bg-ctp-surface0 p-8 px-10">
-            <BackButton to="/blog/" />
+            <div class="inline-flex">
+                <BackButton to="/blog/" />
+            </div>
             <article class="flex flex-col items-center gap-y-4 w-full overflow-auto">
                 <div class="flex flex-col justify-between w-full items-center gap-y-2">
                     <h1 class="w-max text-5xl text-center md:text-left md:text-4xl font-bold tracking-tight flex flex-row items-center gap-x-2 bg-linear-120 from-ctp-peach via-ctp-red to-ctp-mauve-800 bg-clip-text text-transparent">
@@ -45,6 +48,11 @@ export default component$(() => {
                     <span class="text-sm text-ctp-subtext0">
                         Posted{' '}
                         {blog.value.createdAt && new Date(blog.value.createdAt * 1000).toLocaleDateString()}
+                    </span>
+                    <span class="text-xs flex flex-row gap-1.5 max-w-1/3 flex-wrap mt-2">
+                        {blog.value.tags?.map((tag) => (
+                            <TagDisplay tag={tag} key={tag.id} />
+                        ))}
                     </span>
                 </div>
                 {/** biome-ignore lint/security/noDangerouslySetInnerHtml: Always renders trusted HTML content from controlled API endpoint */}

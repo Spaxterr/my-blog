@@ -1,23 +1,13 @@
 import { component$ } from '@builder.io/qwik';
-import { type DocumentHead, Link, routeLoader$, useLocation, useNavigate } from '@builder.io/qwik-city';
+import { type DocumentHead, Link, useLocation, useNavigate } from '@builder.io/qwik-city';
 import { Pagination } from '@qwik-ui/headless';
 import Search from '~/components/search/search';
-import { apiClient } from '~/lib/api';
+import { useBlogPosts } from '~/lib/blog-posts';
 import SharpCircleIcon from '~icons/ic/sharp-circle';
 import SharpKeyboardArrowLeftIcon from '~icons/ic/sharp-keyboard-arrow-left';
 import SharpKeyboardArrowRightIcon from '~icons/ic/sharp-keyboard-arrow-right';
 
-export const useBlogPosts = routeLoader$(async (e) => {
-    const q = e.url.searchParams.get('q');
-    const page = Number(e.url.searchParams.get('page')) || 1;
-    const count = Number(e.url.searchParams.get('count')) || 4;
-
-    const resp = await apiClient.postsListPostsRaw({ q: q ? encodeURIComponent(q) : undefined, count, page });
-    const posts = await resp.value();
-    const total = Number(resp.raw.headers.get('X-Total-Posts'));
-
-    return { posts: posts, total: total };
-});
+export { useBlogPosts };
 
 export default component$(() => {
     const posts = useBlogPosts();

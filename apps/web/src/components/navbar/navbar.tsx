@@ -23,9 +23,14 @@ export const NavBar = component$(() => {
                     Blog
                 </Link>
                 {isAdmin(authSession.value?.user) && (
-                    <Link prefetch={false} class="p-2" href="/new-blog/">
-                        New Blog
-                    </Link>
+                    <>
+                        <Link prefetch={false} class="p-2" href="/new-blog/">
+                            New Blog
+                        </Link>
+                        <Link prefetch={false} class="p-2" href="/admin/">
+                            Admin
+                        </Link>
+                    </>
                 )}
             </div>
             <div class="flex flex-row gap-x-8 items-center-safe">

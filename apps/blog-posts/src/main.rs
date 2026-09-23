@@ -6,7 +6,7 @@ mod validation;
 
 use axum::{
     Router, middleware,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use sqlx::{PgPool, postgres::PgPoolOptions};
 
@@ -39,7 +39,13 @@ async fn main() {
 
     let admin_routes: Router<PgPool> = Router::new()
         .route("/posts", post(handlers::posts::create_post_handler))
+        .route("/posts/{id}", delete(handlers::posts::delete_post_handler))
         .route("/tags", post(handlers::tags::create_tag_handler))
+        .route("/tags/{id}", delete(handlers::tags::delete_tag_handler))
+        .route(
+            "/categories/{id}",
+            delete(handlers::categories::delete_category_handler),
+        )
         .route_layer(middleware::from_fn_with_state(
             auth_client,
             auth::require_admin,
@@ -49,6 +55,11 @@ async fn main() {
         .route("/posts", get(handlers::posts::get_all_posts_handler))
         .route("/posts/{id}", get(handlers::posts::get_post_handler))
         .route("/tags", get(handlers::tags::get_all_tags_handler))
+        .route("/tags/{id}", get(handlers::tags::get_tag_handler))
+        .route(
+            "/categories",
+            get(handlers::categories::get_all_categories_handler),
+        )
         .route("/docs", get(handlers::docs::docs_handler))
         .route("/openapi.json", get(handlers::docs::openapi_handler))
         .merge(admin_routes)
