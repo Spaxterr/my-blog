@@ -5,11 +5,28 @@ import { ResponseError } from '@shared/contracts';
 import TagSelect from '~/components/tag-select/tag-select';
 import { apiClient } from '~/lib/api';
 import { isAdmin } from '~/lib/auth';
-import { useCreateTag, useTags } from '~/lib/loaders';
+import { useCreateTag, useTags } from '~/lib/tags';
 import { useAuthSession } from '../layout';
 import NoPermission from '../no-permission';
 
 export { useCreateTag, useTags };
+
+const TAG_COLORS = [
+    '#f2d5cf',
+    '#eebebe',
+    '#f4b8e4',
+    '#ca9ee6',
+    '#e78284',
+    '#ea999c',
+    '#ef9f76',
+    '#e5c890',
+    '#a6d189',
+    '#81c8be',
+    '#99d1db',
+    '#85c1dc',
+    '#8caaee',
+    '#babbf1',
+];
 
 export const useCreatePost = routeAction$(async (data, event) => {
     try {
@@ -49,7 +66,7 @@ export default component$(() => {
     const createTag = useCreateTag();
     const tagModalOpen = useSignal(false);
     const newTagLabel = useSignal('');
-    const newTagColor = useSignal('#cba6f7');
+    const newTagColor = useSignal('#ca9ee6');
 
     if (!session.value || !isAdmin(session.value.user)) {
         return <NoPermission />;
@@ -81,7 +98,7 @@ export default component$(() => {
                 </label>
                 <div class="flex flex-col gap-y-1">
                     Tags
-                    <div class="flex flex-row items-baseline gap-x-2">
+                    <div class="flex flex-row items-center gap-x-2">
                         <TagSelect tags={tags.value} />
                         <Modal.Root bind:show={tagModalOpen}>
                             <Modal.Trigger class="button-secondary">New Tag</Modal.Trigger>
@@ -95,8 +112,14 @@ export default component$(() => {
                                 <input
                                     bind:value={newTagColor}
                                     type="color"
+                                    inlist="tag-colors"
                                     class="bg-ctp-base dark:bg-ctp-surface0 py-1 px-1 outline-none"
                                 />
+                                <datalist id="tag-colors">
+                                    {TAG_COLORS.map((c) => (
+                                        <option key={c} value={c} />
+                                    ))}
+                                </datalist>
                                 {createTag.value?.errorMessage && (
                                     <p class="text-ctp-red text-sm">{createTag.value.errorMessage}</p>
                                 )}

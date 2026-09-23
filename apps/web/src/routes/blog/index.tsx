@@ -25,7 +25,7 @@ export default component$(() => {
             </h1>
             <Search value={q} />
             <div class="flex flex-col w-full gap-y-4">
-                {posts.value?.posts.map((p) => {
+                {posts.value?.posts?.map((p) => {
                     return (
                         <Link
                             href={`/blog/${p.id}`}
