@@ -1,5 +1,6 @@
 use axum::extract::Path;
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use blog_contracts::models::CreateCategoryPayload;
 use sqlx::PgPool;
 
 use crate::services::categories;

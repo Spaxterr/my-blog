@@ -1,4 +1,4 @@
-use blog_contracts::models::{CreatePostPayload, Post};
+use blog_contracts::models::{Category, CreatePostPayload, Post};
 use blog_contracts::models::{SummarizedPost, Tag};
 use sqlx::PgPool;
 use sqlx::Row;
@@ -12,13 +12,6 @@ pub async fn create_post(pool: &PgPool, payload: &CreatePostPayload) -> Result<(
         .await?
         .expect("Could not begin transaction");
 
-    // Create category
-    let category = sqlx::query(
-        "INSERT INTO categories (id, name) VALUES ((SELECT uuidv7()), $1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name, deleted = false RETURNING id;",
-    )
-    .bind(&payload.category)
-    .fetch_one(&mut *tx).await?;
-
     // Create post
     let post = sqlx::query(
         "INSERT INTO blog_posts (id, title, summary, content, category_id) VALUES ((SELECT uuidv7()), $1, $2, $3, $4) RETURNING id;",
@@ -26,7 +19,7 @@ pub async fn create_post(pool: &PgPool, payload: &CreatePostPayload) -> Result<(
     .bind(&payload.title)
     .bind(&payload.summary)
     .bind(&payload.content)
-    .bind(category.get::<uuid::Uuid, &str>("id"))
+    .bind(payload.category)
     .fetch_one(&mut *tx).await?;
 
     // Connect tags to post
@@ -45,7 +38,7 @@ pub async fn create_post(pool: &PgPool, payload: &CreatePostPayload) -> Result<(
 
 pub async fn get_post(pool: &PgPool, blog_id: &uuid::Uuid) -> Result<Option<Post>, sqlx::Error> {
     let row = sqlx::query(
-        "SELECT p.id, p.title, p.content, COALESCE(c.name, '') AS category, COALESCE(
+        "SELECT p.id, p.title, p.content, p.category_id, CASE WHEN c.id IS NULL THEN NULL ELSE JSON_BUILD_OBJECT('id', c.id, 'name', c.name) END AS category, COALESCE(
                 JSON_AGG(JSON_BUILD_OBJECT('id', t.id, 'label', t.label, 'color', t.color))
                     FILTER (WHERE t.id IS NOT NULL),
                 '[]'
@@ -55,7 +48,7 @@ pub async fn get_post(pool: &PgPool, blog_id: &uuid::Uuid) -> Result<Option<Post
         LEFT JOIN blog_post_tags bt ON bt.blog_id = p.id
         LEFT JOIN tags t ON t.id = bt.tag_id AND t.deleted = false
         WHERE p.id = $1 AND p.deleted = false
-        GROUP BY p.id, c.name;",
+        GROUP BY p.id, c.id;",
     )
     .bind(blog_id)
     .fetch_optional(pool)
@@ -73,7 +66,7 @@ pub async fn get_all_posts(
     count: i32,
 ) -> Result<Vec<SummarizedPost>, sqlx::Error> {
     let rows = sqlx::query(
-        "SELECT p.id, p.title, p.summary, COALESCE(c.name, '') AS category, COALESCE(
+        "SELECT p.id, p.title, p.summary, category_id, CASE WHEN c.id IS NULL THEN NULL ELSE JSON_BUILD_OBJECT('id', c.id, 'name', c.name) END AS category, COALESCE(
                 JSON_AGG(JSON_BUILD_OBJECT('id', t.id, 'label', t.label, 'color', t.color))
                     FILTER (WHERE t.id IS NOT NULL),
                 '[]'
@@ -83,7 +76,7 @@ pub async fn get_all_posts(
         LEFT JOIN blog_post_tags bt ON bt.blog_id = p.id
         LEFT JOIN tags t ON t.id = bt.tag_id AND t.deleted = false
         WHERE p.deleted = false
-        GROUP BY p.id, c.name
+        GROUP BY p.id, c.id
         ORDER BY p.id DESC LIMIT $1 OFFSET $2;",
     )
     .bind(count)
@@ -119,7 +112,7 @@ pub async fn search_posts(
             WHERE (title ||| $1 OR content ||| $1 OR summary ||| $1) AND deleted = false
             ORDER BY score DESC, id DESC LIMIT $2 OFFSET $3
         )
-        SELECT m.id, m.title, m.summary, COALESCE(c.name, '') AS category, COALESCE(
+        SELECT m.id, m.title, m.summary, CASE WHEN c.id IS NULL THEN NULL ELSE JSON_BUILD_OBJECT('id', c.id, 'name', c.name) END AS category, COALESCE(
             JSON_AGG(JSON_BUILD_OBJECT('id', t.id, 'label', t.label, 'color', t.color))
                 FILTER (WHERE t.id IS NOT NULL),
             '[]'
@@ -128,7 +121,7 @@ pub async fn search_posts(
         LEFT JOIN categories c ON c.id = m.category_id AND c.deleted = false
         LEFT JOIN blog_post_tags bt ON bt.blog_id = m.id
         LEFT JOIN tags t ON t.id = bt.tag_id AND t.deleted = false
-        GROUP BY m.id, m.title, m.summary, m.score, c.name
+        GROUP BY m.id, m.title, m.summary, m.score, c.id
         ORDER BY m.score DESC, m.id DESC;",
     )
     .bind(search_term)
@@ -159,7 +152,9 @@ fn row_to_summarized_post(row: &PgRow) -> Result<SummarizedPost, sqlx::Error> {
     let id: uuid::Uuid = row.try_get("id")?;
     let title: String = row.try_get("title")?;
     let summary: String = row.try_get("summary")?;
-    let category: String = row.try_get("category")?;
+    let category = row
+        .try_get::<Option<Json<Category>>, _>("category")?
+        .map(|Json(c)| return c);
     let Json(tags): Json<Vec<Tag>> = row.try_get("tags")?;
     let created_at: Timestamp = id
         .get_timestamp()
@@ -179,7 +174,9 @@ fn row_to_post(row: &PgRow) -> Result<Post, sqlx::Error> {
     let id: uuid::Uuid = row.try_get("id")?;
     let title: String = row.try_get("title")?;
     let content: String = row.try_get("content")?;
-    let category: String = row.try_get("category")?;
+    let category = row
+        .try_get::<Option<Json<Category>>, _>("category")?
+        .map(|Json(c)| return c);
     let Json(tags): Json<Vec<Tag>> = row.try_get("tags")?;
     let created_at: Timestamp = id
         .get_timestamp()

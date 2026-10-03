@@ -33,7 +33,7 @@ model Post {
     title: string;
     content: string;
     tags: Tag[];
-    category: string;
+    category: Category | null;
     created_at: int64;
 }
 
@@ -58,7 +58,7 @@ model CreatePostPayload {
     @minLength(1) @maxLength(200) title: string;
     @minLength(1) @maxLength(100000) content: string;
     @minLength(1) @maxLength(1000) summary: string;
-    @minLength(1) @maxLength(1000) category: string;
+    category: uuid;
     @maxItems(20) tags: Array<uuid>;
 }
 
@@ -68,6 +68,15 @@ model CreateTagPayload {
 
 model CreateCategoryPayload {
     ...OmitProperties<Category, "id">;
+}
+
+model GetPostsFilter {
+    search: string | null;
+    categories: string[] | null;
+    tags: {
+        values: string[] | null;
+        mode: "OR" | "AND";
+    };
 }
 
 // -- Routes

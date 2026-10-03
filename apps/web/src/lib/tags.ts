@@ -23,6 +23,7 @@ export const useCreateTag = routeAction$(async (data, event) => {
                 },
             },
         );
+        return { success: true };
     } catch (err) {
         if (err instanceof ResponseError) {
             return event.fail(err.response.status, {
@@ -39,6 +40,7 @@ export const useDeleteTag = routeAction$(async (data, event) => {
             { id: data.id.toString() },
             { headers: { cookie: event.request.headers.get('cookie') || '' } },
         );
+        return { success: true };
     } catch (err) {
         if (err instanceof ResponseError) {
             return event.fail(err.response.status, {

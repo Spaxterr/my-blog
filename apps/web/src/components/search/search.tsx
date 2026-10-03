@@ -2,7 +2,7 @@ import { component$ } from '@builder.io/qwik';
 import SharpSearchIcon from '~icons/ic/sharp-search';
 
 const Search = component$<{ value?: string }>(({ value }) => (
-    <form class="flex flex-row px-1 bg-ctp-mantle items-center gap-x-2">
+    <form class="flex flex-row px-1 bg-ctp-mantle items-center gap-x-2 w-full">
         <SharpSearchIcon class="text-xl" />
         <input
             type="search"

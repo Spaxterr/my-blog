@@ -1,15 +1,16 @@
 import { component$, useSignal } from '@builder.io/qwik';
-import { Form, routeAction$ } from '@builder.io/qwik-city';
-import { Modal } from '@qwik-ui/headless';
-import { ResponseError } from '@shared/contracts';
+import { Form } from '@builder.io/qwik-city';
+import { Modal, Select } from '@qwik-ui/headless';
 import TagSelect from '~/components/tag-select/tag-select';
-import { apiClient } from '~/lib/api';
 import { isAdmin } from '~/lib/auth';
+import { useCreatePost } from '~/lib/blog-posts';
+import { useCreateCategory } from '~/lib/categories';
 import { useCreateTag, useTags } from '~/lib/tags';
+import { useCategories } from '../admin';
 import { useAuthSession } from '../layout';
 import NoPermission from '../no-permission';
 
-export { useCreateTag, useTags };
+export { useCategories, useCreateCategory, useCreatePost, useCreateTag, useTags };
 
 const TAG_COLORS = [
     '#f2d5cf',
@@ -28,45 +29,21 @@ const TAG_COLORS = [
     '#babbf1',
 ];
 
-export const useCreatePost = routeAction$(async (data, event) => {
-    try {
-        await apiClient.postsCreatePost(
-            {
-                createPostPayload: {
-                    title: String(data.title),
-                    summary: String(data.summary),
-                    content: String(data.content),
-                    tags: [data.tags ?? []].flat().map(String).filter(Boolean),
-                    category: 'blog',
-                },
-            },
-            {
-                headers: {
-                    cookie: event.request.headers.get('cookie') || '',
-                    'Content-Type': 'application/json',
-                },
-            },
-        );
-    } catch (err) {
-        if (err instanceof ResponseError) {
-            return event.fail(err.response.status, {
-                errorMessage: (await err.response.text()) || err.response.statusText,
-            });
-        }
-        throw err;
-    }
-
-    throw event.redirect(302, '/blog');
-});
-
 export default component$(() => {
     const session = useAuthSession();
     const create = useCreatePost();
     const tags = useTags();
+    const categories = useCategories();
+
     const createTag = useCreateTag();
     const tagModalOpen = useSignal(false);
     const newTagLabel = useSignal('');
     const newTagColor = useSignal('#ca9ee6');
+
+    const createCategory = useCreateCategory();
+    const categoryModalOpen = useSignal(false);
+    const newCategoryName = useSignal('');
+    const selectedCategory = useSignal('');
 
     if (!session.value || !isAdmin(session.value.user)) {
         return <NoPermission />;
@@ -96,6 +73,64 @@ export default component$(() => {
                         class="bg-ctp-base dark:bg-ctp-mantle py-2 px-2 outline-none"
                     />
                 </label>
+                <div class="flex flex-row gap-x-2 items-end">
+                    <Select.Root name="category" bind:displayValue={selectedCategory}>
+                        <Select.Label>Category</Select.Label>
+                        <Select.HiddenNativeSelect />
+                        <Select.Trigger
+                            type="button"
+                            class="bg-ctp-base dark:bg-ctp-mantle p-2 px-4 hover:cursor-pointer hover:brightness-125 min-w-36 flex flex-row gap-x-1 items-center justify-start h-8"
+                        >
+                            <Select.DisplayValue>{selectedCategory.value}</Select.DisplayValue>
+                        </Select.Trigger>
+                        <Select.Popover class="data-open:flex flex-row flex-wrap bg-ctp-base w-36 shadow-sm shadow-ctp-base text-ctp-text py-4">
+                            {categories.value.map((c) => {
+                                return (
+                                    <Select.Item
+                                        key={c.id}
+                                        class="hover:bg-ctp-surface1 hover:cursor-pointer w-full"
+                                        value={c.id}
+                                    >
+                                        <Select.ItemLabel class="p-1">{c.name}</Select.ItemLabel>
+                                    </Select.Item>
+                                );
+                            })}
+                        </Select.Popover>
+                    </Select.Root>
+                    <Modal.Root bind:show={categoryModalOpen}>
+                        <Modal.Trigger class="button-secondary">New Category</Modal.Trigger>
+                        <Modal.Panel class="modal-panel shadow-sm shadow-black/20 w-lg">
+                            <Modal.Title>New Category</Modal.Title>
+                            <input
+                                bind:value={newCategoryName}
+                                placeholder="Name"
+                                class="bg-ctp-base dark:bg-ctp-surface0 py-1 px-1 outline-none"
+                            />
+                            {createCategory.value?.errorMessage && (
+                                <p class="text-ctp-red text-sm">{createCategory.value.errorMessage}</p>
+                            )}
+                            <div class="flex flex-row gap-x-1 justify-end">
+                                <Modal.Close class="modal-close button-secondary">Cancel</Modal.Close>
+                                <button
+                                    type="button"
+                                    class="button-primary"
+                                    disabled={createCategory.isRunning}
+                                    onClick$={async () => {
+                                        if (!newCategoryName.value) return;
+                                        const { value } = await createCategory.submit({
+                                            name: newCategoryName.value,
+                                        });
+                                        if (value?.failed) return;
+                                        newCategoryName.value = '';
+                                        categoryModalOpen.value = false;
+                                    }}
+                                >
+                                    Submit
+                                </button>
+                            </div>
+                        </Modal.Panel>
+                    </Modal.Root>
+                </div>
                 <div class="flex flex-col gap-y-1">
                     Tags
                     <div class="flex flex-row items-center gap-x-2">

@@ -1,4 +1,5 @@
 use blog_contracts::models::Category;
+use blog_contracts::models::CreateCategoryPayload;
 use sqlx::PgPool;
 use sqlx::Row;
 
@@ -16,6 +17,18 @@ pub async fn get_all_categories(pool: &PgPool) -> Result<Vec<Category>, sqlx::Er
     }
 
     return Ok(categories);
+}
+
+pub async fn create_category(
+    pool: &PgPool,
+    payload: CreateCategoryPayload,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("INSERT INTO categories (id, name) VALUES ((SELECT uuidv7()), $1);")
+        .bind(payload.name)
+        .execute(pool)
+        .await?;
+
+    return Ok(());
 }
 
 pub async fn delete_category(pool: &PgPool, category_id: &uuid::Uuid) -> Result<(), sqlx::Error> {
