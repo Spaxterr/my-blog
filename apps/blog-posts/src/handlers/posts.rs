@@ -39,7 +39,7 @@ pub async fn create_post_handler(
     return match blog::create_post(&pool, &payload).await {
         Ok(()) => Ok(StatusCode::CREATED),
         Err(e) => {
-            eprint!("Failed to create post: {e}");
+            tracing::error!("Failed to create post: {e}");
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create post".to_owned(),
@@ -55,7 +55,7 @@ pub async fn delete_post_handler(
     return match blog::delete_post(&pool, &id).await {
         Ok(()) => Ok(StatusCode::NO_CONTENT),
         Err(e) => {
-            eprintln!("Failed to delete post: {e}");
+            tracing::error!("Failed to delete post: {e}");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -72,7 +72,7 @@ pub async fn get_post_handler(
             None => return Err(StatusCode::NOT_FOUND),
         },
         Err(e) => {
-            eprint!("Failed to get blog post: {e}");
+            tracing::error!("Failed to get blog post: {e}");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -117,7 +117,7 @@ pub async fn get_all_posts_handler(
             return Ok(([("X-Total-Posts", total.to_string())], Json(posts)));
         }
         Err(e) => {
-            eprintln!("{e}");
+            tracing::error!("{e}");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }

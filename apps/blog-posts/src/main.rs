@@ -9,6 +9,8 @@ use axum::{
     routing::{delete, get, post},
 };
 use sqlx::{PgPool, postgres::PgPoolOptions};
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::EnvFilter;
 
 use crate::{auth::AuthClient, secrets::read_secret};
 
@@ -16,32 +18,42 @@ use crate::{auth::AuthClient, secrets::read_secret};
 async fn main() {
     dotenvy::dotenv().ok();
 
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+            return EnvFilter::new("info,blog_posts=debug,sqlx=debug");
+        }))
+        .init();
+
     let db_url = read_secret("DATABASE_URL").expect("DATABASE_URL is not set");
     let host = read_secret("HOST").expect("HOST is not set");
     let auth_server_host = read_secret("AUTH_HOST").expect("AUTH_HOST is not set");
 
     let auth_client = AuthClient::new(auth_server_host);
 
-    println!("Connecting to Postgres...");
+    tracing::info!("Connecting to Postgres...");
     let pool = PgPoolOptions::new()
         .max_connections(10)
         .connect(&db_url)
         .await
         .expect("Failed to connect to Postgres");
 
-    println!("Running migrations...");
+    tracing::info!("Running migrations...");
     sqlx::migrate!("./migrations")
         .run(&pool)
         .await
         .expect("Failed to run migrations");
 
-    println!("Registering routes...");
+    tracing::info!("Registering routes...");
 
     let admin_routes: Router<PgPool> = Router::new()
         .route("/posts", post(handlers::posts::create_post_handler))
         .route("/posts/{id}", delete(handlers::posts::delete_post_handler))
         .route("/tags", post(handlers::tags::create_tag_handler))
         .route("/tags/{id}", delete(handlers::tags::delete_tag_handler))
+        .route(
+            "/categories",
+            post(handlers::categories::create_category_handler),
+        )
         .route(
             "/categories/{id}",
             delete(handlers::categories::delete_category_handler),
@@ -63,13 +75,14 @@ async fn main() {
         .route("/docs", get(handlers::docs::docs_handler))
         .route("/openapi.json", get(handlers::docs::openapi_handler))
         .merge(admin_routes)
+        .layer(TraceLayer::new_for_http())
         .with_state(pool);
 
     let listener = tokio::net::TcpListener::bind(&host)
         .await
         .unwrap_or_else(|_| panic!("Unable to bind to host address {host}"));
 
-    println!("Listening on 0.0.0.0:3000");
+    tracing::info!("Listening on {host}");
     axum::serve(listener, app)
         .await
         .expect("Could not start Axum instance");

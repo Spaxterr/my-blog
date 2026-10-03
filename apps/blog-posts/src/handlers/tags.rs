@@ -23,7 +23,7 @@ pub async fn create_tag_handler(
     return match tags::create_tag(&pool, &payload).await {
         Ok(()) => Ok(StatusCode::CREATED),
         Err(e) => {
-            eprintln!("Failed to create tag: {e}");
+            tracing::error!("Failed to create tag: {e}");
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create tag".to_owned(),
@@ -39,7 +39,7 @@ pub async fn get_tag_handler(
     return match tags::get_tag(&pool, &id).await {
         Ok(tag) => tag.map_or(Err(StatusCode::NOT_FOUND), |t| return Ok(Json(t))),
         Err(e) => {
-            eprintln!("Failed to get tag: {e}");
+            tracing::error!("Failed to get tag: {e}");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -52,7 +52,7 @@ pub async fn delete_tag_handler(
     return match tags::delete_tag(&pool, &id).await {
         Ok(()) => Ok(StatusCode::NO_CONTENT),
         Err(e) => {
-            eprintln!("Failed to delete tag: {e}");
+            tracing::error!("Failed to delete tag: {e}");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -64,7 +64,7 @@ pub async fn get_all_tags_handler(
     return match tags::get_all_tags(&pool).await {
         Ok(tags) => Ok(Json(tags)),
         Err(e) => {
-            eprintln!("Failed to get tags: {e}");
+            tracing::error!("Failed to get tags: {e}");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };

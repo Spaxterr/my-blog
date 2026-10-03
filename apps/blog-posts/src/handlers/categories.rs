@@ -10,7 +10,20 @@ pub async fn get_all_categories_handler(
     return match categories::get_all_categories(&pool).await {
         Ok(categories) => Ok(Json(categories)),
         Err(e) => {
-            eprintln!("Failed to get categories: {e}");
+            tracing::error!("Failed to get categories: {e}");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+}
+
+pub async fn create_category_handler(
+    State(pool): State<PgPool>,
+    Json(payload): Json<CreateCategoryPayload>,
+) -> Result<impl IntoResponse, StatusCode> {
+    return match categories::create_category(&pool, payload).await {
+        Ok(()) => Ok(StatusCode::CREATED),
+        Err(e) => {
+            tracing::error!("Failed to create category: {e}");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -23,7 +36,7 @@ pub async fn delete_category_handler(
     return match categories::delete_category(&pool, &id).await {
         Ok(()) => Ok(StatusCode::NO_CONTENT),
         Err(e) => {
-            eprintln!("Failed to delete category: {e}");
+            tracing::error!("Failed to delete category: {e}");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };

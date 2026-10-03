@@ -59,13 +59,13 @@ async fn get_session(auth: &AuthClient, incoming: &HeaderMap) -> Result<Session,
         .send()
         .await
         .map_err(|e| {
-            eprintln!("get-session request failed: {e}");
+            tracing::error!("get-session request failed: {e}");
             return StatusCode::BAD_GATEWAY;
         })?
         .json::<Option<Session>>()
         .await
         .map_err(|e| {
-            eprintln!("Could not decode get-session response: {e}");
+            tracing::error!("Could not decode get-session response: {e}");
             return StatusCode::BAD_GATEWAY;
         })?
         .ok_or(StatusCode::UNAUTHORIZED)?;
