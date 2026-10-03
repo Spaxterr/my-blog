@@ -4,7 +4,6 @@ set -euo pipefail
 load_env
 
 # blog-posts migrates itself on boot (sqlx::migrate! in main.rs) — only auth needs this.
-# ponytail: on-failure retries ARE the wait-for-postgres loop
 docker service create --name migrate-auth --no-resolve-image \
   --restart-condition on-failure --restart-max-attempts 10 --restart-delay 5s \
   --network my-blog_default \

@@ -1,15 +1,33 @@
 import { routeAction$, routeLoader$ } from '@builder.io/qwik-city';
-import { ResponseError } from '@shared/contracts';
+import { ResponseError, TagMatchMode } from '@shared/contracts';
 import { apiClient } from './api';
+
+export const PAGE_SIZES = [4, 10, 20, 50];
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Reads the post filters from the URL, dropping anything the API would reject. */
+export const parsePostFilters = (params: URLSearchParams) => {
+    const count = Number(params.get('count'));
+    return {
+        q: params.get('q')?.trim() ?? '',
+        categories: params.getAll('categories').filter((id) => UUID_RE.test(id)),
+        tags: params.getAll('tags').filter((id) => UUID_RE.test(id)),
+        tagMode: params.get('tag_mode') === TagMatchMode.All ? TagMatchMode.All : TagMatchMode.Any,
+        page: Math.max(1, Math.floor(Number(params.get('page'))) || 1),
+        count: PAGE_SIZES.includes(count) ? count : PAGE_SIZES[0],
+    };
+};
 
 export const useBlogPosts = routeLoader$(async (e) => {
     try {
-        const q = e.url.searchParams.get('q');
-        const page = Number(e.url.searchParams.get('page')) || 1;
-        const count = Number(e.url.searchParams.get('count')) || 4;
+        const { q, categories, tags, tagMode, page, count } = parsePostFilters(e.url.searchParams);
 
         const resp = await apiClient.postsListPostsRaw({
-            q: q ? encodeURIComponent(q) : undefined,
+            q: q || undefined,
+            categories: categories.length ? categories : undefined,
+            tags: tags.length ? tags : undefined,
+            tagMode: tags.length ? tagMode : undefined,
             count,
             page,
         });

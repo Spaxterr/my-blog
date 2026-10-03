@@ -1,10 +1,11 @@
 use blog_contracts::models::{Category, CreatePostPayload, Post};
 use blog_contracts::models::{SummarizedPost, Tag};
-use sqlx::PgPool;
 use sqlx::Row;
 use sqlx::postgres::PgRow;
+use sqlx::postgres::Postgres;
 use sqlx::types::Json;
-use uuid::Timestamp;
+use sqlx::{PgPool, QueryBuilder};
+use uuid::{Timestamp, Uuid};
 
 pub async fn create_post(pool: &PgPool, payload: &CreatePostPayload) -> Result<(), sqlx::Error> {
     let mut tx = pool
@@ -60,58 +61,68 @@ pub async fn get_post(pool: &PgPool, blog_id: &uuid::Uuid) -> Result<Option<Post
     }
 }
 
-pub async fn get_all_posts(
-    pool: &PgPool,
-    page: i32,
-    count: i32,
-) -> Result<Vec<SummarizedPost>, sqlx::Error> {
-    let rows = sqlx::query(
-        "SELECT p.id, p.title, p.summary, category_id, CASE WHEN c.id IS NULL THEN NULL ELSE JSON_BUILD_OBJECT('id', c.id, 'name', c.name) END AS category, COALESCE(
-                JSON_AGG(JSON_BUILD_OBJECT('id', t.id, 'label', t.label, 'color', t.color))
-                    FILTER (WHERE t.id IS NOT NULL),
-                '[]'
-            ) AS tags
-        FROM blog_posts p
-        LEFT JOIN categories c ON c.id = p.category_id AND c.deleted = false
-        LEFT JOIN blog_post_tags bt ON bt.blog_id = p.id
-        LEFT JOIN tags t ON t.id = bt.tag_id AND t.deleted = false
-        WHERE p.deleted = false
-        GROUP BY p.id, c.id
-        ORDER BY p.id DESC LIMIT $1 OFFSET $2;",
-    )
-    .bind(count)
-    .bind((page - 1) * count)
-    .fetch_all(pool)
-    .await?;
+pub struct PostFilter {
+    pub search: Option<String>,
+    pub categories: Vec<Uuid>,
+    pub tags: Vec<Uuid>,
+    pub match_all_tags: bool,
+}
 
-    let mut posts: Vec<SummarizedPost> = Vec::new();
-    for row in rows {
-        let blog_post = row_to_summarized_post(&row)?;
-        posts.push(blog_post);
+fn push_filter(qb: &mut QueryBuilder<Postgres>, filter: &PostFilter) {
+    qb.push(" WHERE p.deleted = false");
+
+    if let Some(search) = &filter.search {
+        qb.push(" AND (p.title ||| ")
+            .push_bind(search.clone())
+            .push(" OR p.content ||| ")
+            .push_bind(search.clone())
+            .push(" OR p.summary ||| ")
+            .push_bind(search.clone())
+            .push(")");
     }
 
-    return Ok(posts);
+    if !filter.categories.is_empty() {
+        qb.push(" AND p.category_id = ANY(")
+            .push_bind(filter.categories.clone())
+            .push(")");
+    }
+
+    if !filter.tags.is_empty() {
+        // Tags must be deduplicated, otherwise ALL can never match
+        let required = if filter.match_all_tags {
+            i64::try_from(filter.tags.len()).unwrap_or(i64::MAX)
+        } else {
+            1
+        };
+        qb.push(" AND (SELECT count(*) FROM blog_post_tags bt WHERE bt.blog_id = p.id AND bt.tag_id = ANY(")
+            .push_bind(filter.tags.clone())
+            .push(")) >= ")
+            .push_bind(required);
+    }
 }
 
-pub async fn count_posts(pool: &PgPool) -> Result<i64, sqlx::Error> {
-    return sqlx::query_scalar("SELECT count(*) FROM blog_posts WHERE deleted = false;")
-        .fetch_one(pool)
-        .await;
-}
-
-pub async fn search_posts(
+pub async fn list_posts(
     pool: &PgPool,
-    search_term: &str,
+    filter: &PostFilter,
     page: i32,
     count: i32,
 ) -> Result<Vec<SummarizedPost>, sqlx::Error> {
-    let records = sqlx::query(
-        "WITH matches AS (
-            SELECT id, title, summary, category_id, pdb.score(id) AS score
-            FROM blog_posts
-            WHERE (title ||| $1 OR content ||| $1 OR summary ||| $1) AND deleted = false
-            ORDER BY score DESC, id DESC LIMIT $2 OFFSET $3
-        )
+    let score = if filter.search.is_some() {
+        "pdb.score(p.id)"
+    } else {
+        "0::real"
+    };
+
+    let mut qb = QueryBuilder::new(format!(
+        "WITH matches AS (SELECT p.id, p.title, p.summary, p.category_id, {score} AS score FROM blog_posts p"
+    ));
+    push_filter(&mut qb, filter);
+    qb.push(" ORDER BY score DESC, p.id DESC LIMIT ")
+        .push_bind(count)
+        .push(" OFFSET ")
+        .push_bind(i64::from(page - 1) * i64::from(count));
+    qb.push(
+        ")
         SELECT m.id, m.title, m.summary, CASE WHEN c.id IS NULL THEN NULL ELSE JSON_BUILD_OBJECT('id', c.id, 'name', c.name) END AS category, COALESCE(
             JSON_AGG(JSON_BUILD_OBJECT('id', t.id, 'label', t.label, 'color', t.color))
                 FILTER (WHERE t.id IS NOT NULL),
@@ -123,20 +134,18 @@ pub async fn search_posts(
         LEFT JOIN tags t ON t.id = bt.tag_id AND t.deleted = false
         GROUP BY m.id, m.title, m.summary, m.score, c.id
         ORDER BY m.score DESC, m.id DESC;",
-    )
-    .bind(search_term)
-    .bind(count)
-    .bind((page - 1) * count)
-    .fetch_all(pool)
-    .await?;
+    );
 
-    let mut posts: Vec<SummarizedPost> = Vec::new();
-    for row in records {
-        let blog_post = row_to_summarized_post(&row)?;
-        posts.push(blog_post);
-    }
+    let rows = qb.build().fetch_all(pool).await?;
 
-    return Ok(posts);
+    return rows.iter().map(row_to_summarized_post).collect();
+}
+
+pub async fn count_posts(pool: &PgPool, filter: &PostFilter) -> Result<i64, sqlx::Error> {
+    let mut qb = QueryBuilder::new("SELECT count(*) FROM blog_posts p");
+    push_filter(&mut qb, filter);
+
+    return qb.build_query_scalar().fetch_one(pool).await;
 }
 
 pub async fn delete_post(pool: &PgPool, blog_id: &uuid::Uuid) -> Result<(), sqlx::Error> {

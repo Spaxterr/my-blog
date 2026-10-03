@@ -1,7 +1,5 @@
 use axum::response::Html;
 
-// ponytail: spec baked in at compile time, so it can never drift from the crate
-// it documents and there is no file to ship alongside the binary.
 const OPENAPI_JSON: &str =
     include_str!("../../../../packages/contracts/tsp-output/@typespec/openapi3/openapi.json");
 

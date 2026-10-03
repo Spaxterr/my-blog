@@ -61,7 +61,7 @@ export default component$(() => {
                             </a>
                             <span class="text-xs text-ctp-subtext0">
                                 {new Date(p.createdAt * 1000).toLocaleDateString()} ·{' '}
-                                {p.category || 'no category'} ·{' '}
+                                {p.category?.name ?? 'no category'} ·{' '}
                                 {p.tags.map((t) => t.label).join(', ') || 'no tags'}
                             </span>
                         </div>
@@ -139,7 +139,7 @@ export default component$(() => {
                     >
                         <span class="flex-1">{c.name}</span>
                         <span class="text-xs text-ctp-subtext0">
-                            {posts.value.posts?.filter((p) => p.category === c.name).length} posts
+                            {posts.value.posts?.filter((p) => p.category?.id === c.id).length} posts
                         </span>
                         <Modal.Root>
                             <Modal.Trigger class="text-ctp-red text-xl" disabled={deleteCategory.isRunning}>

@@ -1,94 +1,89 @@
-import { component$, useSignal } from '@builder.io/qwik';
+import { component$ } from '@builder.io/qwik';
 import { type DocumentHead, Link, useLocation, useNavigate } from '@builder.io/qwik-city';
-import { Pagination, Select } from '@qwik-ui/headless';
-import Search from '~/components/search/search';
-import { useBlogPosts } from '~/lib/blog-posts';
+import { Pagination } from '@qwik-ui/headless';
+import PostFilter from '~/components/post-filter/post-filter';
+import { parsePostFilters, useBlogPosts } from '~/lib/blog-posts';
 import { useCategories } from '~/lib/categories';
+import { useTags } from '~/lib/tags';
 import SharpCircleIcon from '~icons/ic/sharp-circle';
 import SharpKeyboardArrowLeftIcon from '~icons/ic/sharp-keyboard-arrow-left';
 import SharpKeyboardArrowRightIcon from '~icons/ic/sharp-keyboard-arrow-right';
+import SharpSearchOffIcon from '~icons/ic/sharp-search-off';
 
-export { useBlogPosts, useCategories };
+export { useBlogPosts, useCategories, useTags };
 
 export default component$(() => {
     const posts = useBlogPosts();
+    const categories = useCategories();
+    const tags = useTags();
     const location = useLocation();
     const nav = useNavigate();
-    const q = location.url.searchParams.get('q') || undefined;
-    const page = Number(location.url.searchParams.get('page')) || 1;
-    const count = Number(location.url.searchParams.get('count')) || 4;
-    const totalPages = Math.max(1, Math.ceil(Number(posts.value?.total ?? 0) / count));
-
-    const categories = useCategories();
-    const selectedCategory = useSignal('');
+    const { page, count } = parsePostFilters(location.url.searchParams);
+    const total = posts.value.failed ? 0 : posts.value.total;
+    const totalPages = Math.max(1, Math.ceil(total / count));
 
     return (
         <div class="flex flex-col w-full gap-y-8">
             <h1 class="w-max text-5xl text-center md:text-left md:text-4xl font-bold tracking-tight bg-linear-120 from-ctp-peach via-ctp-red to-ctp-mauve-800 bg-clip-text text-transparent">
                 Blog Posts
             </h1>
-            <div class="flex flex-row gap-x-1">
-                <Search value={q} />
-                <Select.Root name="category" bind:displayValue={selectedCategory}>
-                    <Select.HiddenNativeSelect />
-                    <Select.Trigger
-                        type="button"
-                        class="bg-ctp-base dark:bg-ctp-mantle p-2 px-4 hover:cursor-pointer hover:brightness-125 min-w-36 flex flex-row gap-x-1 items-center justify-start h-full"
-                    >
-                        <Select.DisplayValue>{selectedCategory.value}</Select.DisplayValue>
-                    </Select.Trigger>
-                    <Select.Popover class="data-open:flex flex-row flex-wrap bg-ctp-base w-36 shadow-sm shadow-ctp-base text-ctp-text py-4">
-                        {categories.value.map((c) => {
-                            return (
-                                <Select.Item
-                                    key={c.id}
-                                    class="hover:bg-ctp-surface1 hover:cursor-pointer w-full"
-                                    value={c.id}
-                                >
-                                    <Select.ItemLabel class="p-1">{c.name}</Select.ItemLabel>
-                                </Select.Item>
-                            );
-                        })}
-                    </Select.Popover>
-                </Select.Root>
-            </div>
+            <PostFilter categories={categories.value} tags={tags.value} />
+            {posts.value.failed ? (
+                <p role="alert" class="p-4 border border-ctp-red text-ctp-red text-sm">
+                    Could not load posts: {posts.value.errorMessage}
+                </p>
+            ) : (
+                <p aria-live="polite" class="-mt-4 text-xs text-ctp-subtext0">
+                    {total} {total === 1 ? 'post' : 'posts'}
+                </p>
+            )}
+            {!posts.value.failed && posts.value.posts.length === 0 && (
+                <div class="flex flex-col items-center gap-y-2 py-12 text-ctp-subtext0">
+                    <SharpSearchOffIcon class="text-4xl" />
+                    <p>No posts match your filters.</p>
+                    <Link href={location.url.pathname} class="text-sm text-ctp-mauve underline">
+                        Clear filters
+                    </Link>
+                </div>
+            )}
             <div class="flex flex-col w-full gap-y-4">
-                {posts.value?.posts?.map((p) => {
-                    return (
-                        <Link
-                            href={`/blog/${p.id}`}
-                            key={p.id}
-                            class="flex flex-col p-4 bg-ctp-mantle dark:bg-ctp-surface0 hover:brightness-125"
-                        >
-                            <div class="flex flex-row justify-between items-start">
-                                <h2 class="text-2xl font-bold">{p.title}</h2>
-                                <span class="text-ctp-subtext0">{p.category?.name}</span>
-                            </div>
-                            <p class="text-sm font-thin text-ctp-subtext0">{p.summary}</p>
-                            <div class="flex flex-row gap-x-2 items-center mt-4">
-                                <div class="text-ctp-subtext0 text-xs">
-                                    <span>{new Date(p.createdAt * 1000).toLocaleDateString()}</span>
+                {!posts.value.failed &&
+                    posts.value.posts.map((p) => {
+                        return (
+                            <Link
+                                href={`/blog/${p.id}`}
+                                key={p.id}
+                                class="flex flex-col p-4 bg-ctp-mantle dark:bg-ctp-surface0 hover:brightness-125"
+                            >
+                                <div class="flex flex-row justify-between items-start">
+                                    <h2 class="text-2xl font-bold">{p.title}</h2>
+                                    <span class="text-ctp-subtext0">{p.category?.name}</span>
                                 </div>
-                                <div class="text-[0.3rem] text-ctp-surface2">
-                                    <SharpCircleIcon />
+                                <p class="text-sm font-thin text-ctp-subtext0">{p.summary}</p>
+                                <div class="flex flex-row gap-x-2 items-center mt-4">
+                                    <div class="text-ctp-subtext0 text-xs">
+                                        <span>{new Date(p.createdAt * 1000).toLocaleDateString()}</span>
+                                    </div>
+                                    <div class="text-[0.3rem] text-ctp-surface2">
+                                        <SharpCircleIcon />
+                                    </div>
+                                    <div class="flex flex-row gap-x-1 items-center">
+                                        {p.tags.map((tag) => {
+                                            return (
+                                                <div
+                                                    class="text-ctp-subtext1 border py-0.5 px-1 text-xs"
+                                                    style={{ borderColor: tag.color }}
+                                                    key={`${tag.id}`}
+                                                >
+                                                    {tag.label}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                                <div class="flex flex-row gap-x-1 items-center">
-                                    {p.tags.map((tag) => {
-                                        return (
-                                            <div
-                                                class="text-ctp-subtext1 border py-0.5 px-1 text-xs"
-                                                style={{ borderColor: tag.color }}
-                                                key={`${tag.id}`}
-                                            >
-                                                {tag.label}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </Link>
-                    );
-                })}
+                            </Link>
+                        );
+                    })}
                 <div class="mx-auto">
                     {totalPages > 1 && (
                         <Pagination

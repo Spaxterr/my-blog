@@ -70,13 +70,12 @@ model CreateCategoryPayload {
     ...OmitProperties<Category, "id">;
 }
 
-model GetPostsFilter {
-    search: string | null;
-    categories: string[] | null;
-    tags: {
-        values: string[] | null;
-        mode: "OR" | "AND";
-    };
+enum TagMatchMode {
+    /** Posts with at least one of the given tags. */
+    ANY,
+
+    /** Posts with every one of the given tags. */
+    ALL,
 }
 
 // -- Routes
@@ -85,6 +84,14 @@ model GetPostsFilter {
 interface Posts {
     @get listPosts(
         @query q?: string,
+
+        /** Only posts in any of these categories. */
+        @query categories?: uuid[],
+
+        /** Only posts with these tags, matched according to `tag_mode`. */
+        @query tags?: uuid[],
+
+        @query tag_mode?: TagMatchMode = TagMatchMode.ANY,
         @query @minValue(1) page: int32,
 
         @query
