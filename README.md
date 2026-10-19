@@ -1,159 +1,53 @@
-# Turborepo starter
+# My Blog
 
-This Turborepo starter is maintained by the Turborepo core team.
+A self-hosted Turborepo monorepo with three services behind Caddy, deployed as a Docker Swarm stack.
 
-## Using this example
+| Path                  | What it is                                                                      |
+| --------------------- | ------------------------------------------------------------------------------- |
+| `apps/web`            | Qwik City frontend with SSR and Tailwind                                        |
+| `apps/auth`           | Hono + better-auth. GitHub/Discord OAuth, Postgres, sessions in Redis           |
+| `apps/blog-posts`     | Rust (axum + sqlx) API for posts, tags and categories. Writes are admin-only    |
+| `apps/caddy`          | Reverse proxy and TLS                                                           |
+| `packages/contracts`  | TypeSpec API definition that generates the TS client and the Rust models         |
+| `packages/biome-config` | Shared Biome config                                                           |
 
-Run the following command:
+## Requirements
 
-```sh
-npx create-turbo@latest
+- Node >= 26, pnpm 12
+- Rust (stable)
+- Java, which `openapi-generator-cli` needs to generate the contracts
+- Postgres (ParadeDB image in production) and Redis
+
+## Local development
+
+```bash
+pnpm install
+pnpm --filter @shared/contracts build   # generates packages/contracts/{typescript,rust}
+cp apps/blog-posts/.env.example apps/blog-posts/.env
+pnpm dev
 ```
 
-## What's inside?
+| Service      | Default URL              |
+| ------------ | ------------------------ |
+| `web`        | http://localhost:5173    |
+| `blog-posts` | http://localhost:3000 (API docs at `/docs`) |
+| `auth`       | http://localhost:3001    |
 
-This Turborepo includes the following packages/apps:
+`auth` reads its config from `/run/secrets/<name>` first and falls back to env vars. You need to set these:
+`DATABASE_URL`, `REDIS_URL`, `SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`,
+`DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`. Create its tables with `pnpm --filter auth migrate`.
+`blog-posts` runs its own migrations when it starts.
 
-### Apps and Packages
+## Scripts
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+Run these from the repo root. Turbo runs each one in every workspace.
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```bash
+pnpm dev | build | lint | format | test | check-types
 ```
 
-Without global `turbo`, use your package manager:
+Husky hooks: the pre-commit hook runs gitleaks and lints staged files. The pre-push hook runs type checks, tests and the build.
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm dlx turbo build
-pnpm exec turbo build
-```
+## Deployment
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+See [DEPLOYMENT.md](DEPLOYMENT.md).
