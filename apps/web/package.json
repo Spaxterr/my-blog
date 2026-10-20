@@ -19,7 +19,6 @@
         "lint": "biome check",
         "lint:staged": "biome check --staged --no-errors-on-unmatched",
         "serve": "node server/entry.node-server",
-        "test": "vitest",
         "qwik": "qwik"
     },
     "devDependencies": {
