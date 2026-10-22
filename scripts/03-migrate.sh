@@ -14,6 +14,6 @@ docker service create --name migrate-auth --no-resolve-image \
   --secret source=my-blog_auth_github_client_id,target=github_client_id \
   --secret source=my-blog_auth_github_client_secret,target=github_client_secret \
   --secret source=my-blog_auth_secret,target=secret \
-  "$IMAGE_PREFIX/auth:$TAG" pnpm migrate
+  "$IMAGE_PREFIX/auth:$TAG" node dist/migrate.js
 
 docker service logs -f migrate-auth
