@@ -1,0 +1,592 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Blog API",
+    "version": "0.0.0"
+  },
+  "tags": [],
+  "paths": {
+    "/categories": {
+      "get": {
+        "operationId": "Categories_listCategories",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "explode": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "Categories_createCategory",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "The request has succeeded and a new resource has been created as a result."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryPayload"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/categories/{id}": {
+      "delete": {
+        "operationId": "Categories_deleteCategory",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/uuid",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "There is no content to send for this request, but the headers may be useful. "
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/posts": {
+      "get": {
+        "operationId": "Posts_listPosts",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "explode": false
+          },
+          {
+            "name": "categories",
+            "in": "query",
+            "required": false,
+            "description": "Only posts in any of these categories.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/uuid"
+              }
+            },
+            "explode": false
+          },
+          {
+            "name": "tags",
+            "in": "query",
+            "required": false,
+            "description": "Only posts with these tags, matched according to `tag_mode`.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/uuid"
+              }
+            },
+            "explode": false
+          },
+          {
+            "name": "tag_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/TagMatchMode"
+                }
+              ],
+              "default": "ANY"
+            },
+            "explode": false
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1
+            },
+            "explode": false
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "explode": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "headers": {
+              "x-total-posts": {
+                "required": true,
+                "schema": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SummarizedPost"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "Posts_createPost",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "The request has succeeded and a new resource has been created as a result."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePostPayload"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/posts/{id}": {
+      "get": {
+        "operationId": "Posts_getPost",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/uuid",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "content_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PostContentType"
+            },
+            "explode": false
+          },
+          {
+            "name": "theme",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Theme"
+            },
+            "explode": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "Posts_deletePost",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/uuid",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "There is no content to send for this request, but the headers may be useful. "
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/tags": {
+      "get": {
+        "operationId": "Tags_listTags",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "explode": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tag"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "Tags_createTag",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "The request has succeeded and a new resource has been created as a result."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTagPayload"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/tags/{id}": {
+      "delete": {
+        "operationId": "Tags_deleteTag",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/uuid",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "There is no content to send for this request, but the headers may be useful. "
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Category": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateCategoryPayload": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreatePostPayload": {
+        "type": "object",
+        "required": [
+          "title",
+          "content",
+          "summary",
+          "category",
+          "tags"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "category": {
+            "$ref": "#/components/schemas/uuid"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/uuid"
+            },
+            "maxItems": 20
+          }
+        }
+      },
+      "CreateTagPayload": {
+        "type": "object",
+        "required": [
+          "label",
+          "color"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "color": {
+            "$ref": "#/components/schemas/HexColor"
+          }
+        }
+      },
+      "HexColor": {
+        "type": "string",
+        "pattern": "^#([0-9a-fA-F]{6})$",
+        "description": "A 6-digit hex color code.",
+        "example": "#3b82f6"
+      },
+      "Post": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "content",
+          "tags",
+          "category",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "category": {
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Category"
+              }
+            ],
+            "nullable": true
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PostContentType": {
+        "type": "string",
+        "enum": [
+          "MARKDOWN",
+          "HTML"
+        ]
+      },
+      "SummarizedPost": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "tags",
+          "category",
+          "created_at",
+          "summary"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "category": {
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Category"
+              }
+            ],
+            "nullable": true
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "summary": {
+            "type": "string"
+          }
+        },
+        "description": "Represents a blog post without content, instead containing a summary."
+      },
+      "Tag": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "color"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/uuid"
+          },
+          "label": {
+            "type": "string"
+          },
+          "color": {
+            "$ref": "#/components/schemas/HexColor"
+          }
+        }
+      },
+      "TagMatchMode": {
+        "type": "string",
+        "enum": [
+          "ANY",
+          "ALL"
+        ]
+      },
+      "Theme": {
+        "type": "string",
+        "enum": [
+          "Latte",
+          "Frappe",
+          "Macchiato",
+          "Mocha"
+        ]
+      },
+      "uuid": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "Bearer"
+      }
+    }
+  }
+}
