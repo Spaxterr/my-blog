@@ -89,12 +89,12 @@ volumes:
   caddy_config:
 
 secrets:
-  postgres_password: { external: true }
-  auth_database_url: { external: true }
-  auth_redis_url: { external: true }
-  auth_discord_client_id: { external: true }
-  auth_discord_client_secret: { external: true }
-  auth_github_client_id: { external: true }
-  auth_github_client_secret: { external: true }
-  auth_secret: { external: true }
-  blog_database_url: { external: true }
+  postgres_password: { external: true, name: my-blog_postgres_password }
+  auth_database_url: { external: true, name: my-blog_auth_database_url }
+  auth_redis_url: { external: true, name: my-blog_auth_redis_url }
+  auth_discord_client_id: { external: true, name: my-blog_auth_discord_client_id }
+  auth_discord_client_secret: { external: true, name: my-blog_auth_discord_client_secret }
+  auth_github_client_id: { external: true, name: my-blog_auth_github_client_id }
+  auth_github_client_secret: { external: true, name: my-blog_auth_github_client_secret }
+  auth_secret: { external: true, name: my-blog_auth_secret }
+  blog_database_url: { external: true, name: my-blog_blog_database_url }

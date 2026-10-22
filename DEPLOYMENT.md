@@ -69,13 +69,13 @@ Internal names never vary between environments, so they are not knobs.
 
 ## 3. Create secrets
 
-All nine are required and must exist before deploying. It is important to create them without the value being saved in shell history.
+All nine are required and must exist before deploying. Swarm secret names are cluster-wide, so each is created with a `my-blog_` prefix (the table below omits it). It is important to create them without the value being saved in shell history.
 
 **Generated values** (`postgres_password`, `auth_secret`) - pipe the generator
 straight in, so the value is never displayed, stored, or typed:
 
 ```bash
-openssl rand -base64 32 | docker secret create auth_secret -
+openssl rand -base64 32 | docker secret create my-blog_auth_secret -
 ```
 
 OAuth client secrets: `read -s` keeps it off the
@@ -83,24 +83,24 @@ screen, and the command line contains only the variable name:
 
 ```bash
 read -rs 'SECRET?Value: ' && printf '%s' "$SECRET" | \
-  docker secret create auth_github_client_secret - && unset SECRET
+  docker secret create my-blog_auth_github_client_secret - && unset SECRET
 ```
 
 **Values already in a file**: pass the path, then remove the file:
 
 ```bash
-docker secret create auth_github_client_secret ./secret.txt && shred -u ./secret.txt
+docker secret create my-blog_auth_github_client_secret ./secret.txt && shred -u ./secret.txt
 ```
 
 Composing a value from another, without either appearing in history:
 
 ```bash
 read -rs 'PGPW?Postgres password: '
-printf '%s' "$PGPW" | docker secret create postgres_password -
+printf '%s' "$PGPW" | docker secret create my-blog_postgres_password -
 printf 'postgres://postgres:%s@postgres:5432/my_blog' "$PGPW" |
-  docker secret create auth_database_url -
+  docker secret create my-blog_auth_database_url -
 printf 'postgres://postgres:%s@postgres:5432/my_blog' "$PGPW" |
-  docker secret create blog_database_url -
+  docker secret create my-blog_blog_database_url -
 unset PGPW
 ```
 
