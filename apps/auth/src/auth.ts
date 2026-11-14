@@ -45,6 +45,8 @@ export function setupAuth(config: AppConfig) {
         }),
         secret: config.secret,
         advanced: {
+            // Caddy sets this from CF-Connecting-IP; X-Forwarded-For can be spoofed by the client.
+            ipAddress: { ipAddressHeaders: ['x-real-ip'] },
             database: {
                 joins: true,
                 generateId: () => {

@@ -18,4 +18,5 @@ COPY --from=build /app/apps/auth/dist/ /app/apps/auth/dist/
 WORKDIR /app/apps/auth
 USER node
 
-CMD ["node", "dist/index.js"]
+# Replicas starting together on a first deploy can race on CREATE TABLE; the loser exits and Swarm restarts it.
+CMD ["sh", "-c", "node dist/migrate.js && exec node dist/index.js"]

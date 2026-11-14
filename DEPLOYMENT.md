@@ -1,238 +1,209 @@
 # Deployment
 
-Everything is served from one origin — `$DOMAIN_NAME`. There are no subdomains.
+The app runs as a Docker Swarm stack on one machine. One script builds, creates
+secrets, and deploys:
 
-| Path                      | Service                                                |
-| ------------------------- | ------------------------------------------------------ |
-| `/api/auth/*`             | `auth`                                                 |
-| `/api/blog/*`             | `blog-posts` (reads public, `POST /posts` admin-gated) |
-| everything else           | `web`                                                  |
+```bash
+./scripts/deploy.sh
+```
 
-`auth` has to share the web origin: its session cookie is host-only, so on an
-`auth.$DOMAIN_NAME` the browser would never send it to `$DOMAIN_NAME` — and `web`
-reads the session server-side, from the cookie header of the incoming request. On
-a separate host every `routeLoader$` and `routeAction$` sees a logged-out user no
-matter who is signed in.
+## First deploy
 
-`blog-posts` is there for consistency rather than necessity — `web` only ever
-calls it server-side over the overlay network, so the public mount exists for
-`/api/blog/docs` and any external consumer. Caddy strips the `/api/blog` prefix,
-so the service still serves `/posts` and `/openapi.json` at its own root.
+Run these on the server, from a git checkout of this repo.
 
-## 1. Prerequisites
+**1. Point your domain at the server in Cloudflare.**
+
+- Under **DNS**, add an `A` record for your domain with the server's public IP,
+  and leave **Proxied** on (orange cloud).
+- Under **SSL/TLS**, set the encryption mode to **Full (strict)**. Caddy gets
+  a real Let's Encrypt certificate, so Cloudflare can verify it.
+- Open ports 80 and 443 (TCP and UDP) on the server.
+
+**2. Turn on Swarm** (only once per machine):
 
 ```bash
 docker swarm init
 ```
 
-Point `$DOMAIN_NAME` at the machine's public IP before deploying.
+**3. Create the OAuth apps** on [GitHub](https://github.com/settings/developers)
+and [Discord](https://discord.com/developers/applications). Set the callback URLs
+to these exact values, replacing `example.com` with your domain:
 
-Everything below runs from a git checkout on that machine. Docker needs
-BuildKit, which is the default.
+```
+https://example.com/api/auth/callback/github
+https://example.com/api/auth/callback/discord
+```
 
-## 2. Configure
+Keep the client IDs and secrets at hand for step 5.
+
+**4. Configure:**
 
 ```bash
 cp .env.example .env
-$EDITOR .env
+$EDITOR .env        # set DOMAIN_NAME and ACME_EMAIL
 ```
 
-| Variable | Default | Effect |
-|---|---|---|
-| `DOMAIN_NAME` | *required* | Apex domain. Every public origin is derived from it — `https://$DOMAIN_NAME` becomes `auth`'s own base URL, its trusted origin, and the OAuth redirect base. |
-| `ACME_EMAIL` | `admin@example.com` | Contact for the certificate authority; gets expiry warnings. |
-| `IMAGE_PREFIX` | `my-blog` | Registry path for multi-node; leave as-is for one node. |
-| `RESOLVE_IMAGE` | `never` | Set to `always` when using a registry. |
-| `PUSH` | `0` | `1` pushes images after building. |
-| `REPLICAS` | `2` | All three app services. |
-| `LOG_LEVEL` | `info` | `auth` log level. |
-| `TAG` | commit SHA | Image tag. Set to deploy or roll back a specific build. |
-
-For a local deploy, `DOMAIN_NAME=localhost`. Caddy signs `*.localhost` with its
-own CA instead of calling Let's Encrypt, so it works offline; browsers and `curl`
-will not trust that CA until you install it (`docker cp` it out of
-`/data/caddy/pki/authorities/local/root.crt`), so until then use `curl -k`.
-
-**Swarm's published ports are IPv4-only.** If `getent hosts localhost`
-returns only `::1`, every request hangs; add `127.0.0.1 localhost` to
-`/etc/hosts`.
-
-`.env` is gitignored and holds no credentials. A missing `DOMAIN_NAME` aborts the
-deploy naming the variable.
-
-The public origin is only half the picture: the `web` container also renders
-server-side, and going back out through Caddy to reach a service on its own
-overlay network is a pointless round trip. So SSR uses `AUTH_INTERNAL_HOST`
-(`http://auth:3001`, a literal in `docker-stack.yml`) while the browser gets
-`AUTH_HOST` from a `<meta name="auth-host">` tag. Same for `BLOG_POSTS_HOST`.
-Internal names never vary between environments, so they are not knobs.
-
-## 3. Create secrets
-
-All nine are required and must exist before deploying. Swarm secret names are cluster-wide, so each is created with a `my-blog_` prefix (the table below omits it). It is important to create them without the value being saved in shell history.
-
-**Generated values** (`postgres_password`, `auth_secret`) - pipe the generator
-straight in, so the value is never displayed, stored, or typed:
+**5. Deploy:**
 
 ```bash
-openssl rand -base64 32 | docker secret create my-blog_auth_secret -
+./scripts/deploy.sh
 ```
 
-OAuth client secrets: `read -s` keeps it off the
-screen, and the command line contains only the variable name:
+The first run asks for the four OAuth values. Input is hidden and the values
+never touch disk or shell history. The script generates the database and Redis
+passwords and the auth signing secret itself.
+
+Postgres needs a few seconds to start, so `auth` may restart a couple of times
+first. That's normal. Then [check it works](#check-it-works).
+
+## Deploy an update
 
 ```bash
-read -rs 'SECRET?Value: ' && printf '%s' "$SECRET" | \
-  docker secret create my-blog_auth_github_client_secret - && unset SECRET
+git pull
+./scripts/deploy.sh
 ```
 
-**Values already in a file**: pass the path, then remove the file:
+`web`, `auth` and `blog-posts` are replaced one task at a time, and each new
+task starts before the old one stops. Caddy restarts once, which drops requests
+for a second or two. Database migrations run automatically
+when `auth` and `blog-posts` start. While the update rolls out, old and new
+versions run together, so a migration must still work with the previous
+version.
+
+## Roll back
+
+Images are tagged with the commit SHA they were built from. Setting `TAG`
+deploys an existing build without rebuilding:
 
 ```bash
-docker secret create my-blog_auth_github_client_secret ./secret.txt && shred -u ./secret.txt
+docker image ls my-blog/web          # list the available tags
+TAG=abc1234 ./scripts/deploy.sh
 ```
 
-Composing a value from another, without either appearing in history:
+## Check it works
 
 ```bash
-read -rs 'PGPW?Postgres password: '
-printf '%s' "$PGPW" | docker secret create my-blog_postgres_password -
-printf 'postgres://postgres:%s@postgres:5432/my_blog' "$PGPW" |
-  docker secret create my-blog_auth_database_url -
-printf 'postgres://postgres:%s@postgres:5432/my_blog' "$PGPW" |
-  docker secret create my-blog_blog_database_url -
-unset PGPW
+docker stack services my-blog        # every REPLICAS column should read n/n
 ```
 
-Three things to avoid:
+```bash
+set -a; . ./.env; set +a             # loads $DOMAIN_NAME into the shell
+curl -f https://$DOMAIN_NAME                    # the site
+curl -f https://$DOMAIN_NAME/api/auth/ok        # {"ok":true}
+curl -f https://$DOMAIN_NAME/api/blog/posts     # the posts as JSON
+```
 
-- `docker secret create name <<< "$SECRET"`: bash backs a herestring with a
-  temp file in `/tmp`, so the value hits disk. A pipe does not.
-- Putting the literal in the command (`printf '%s' 'hunter2' | ...`): Lands in `~/.bash_history`.
-- Piping with a non-builtin (`/bin/echo`): the value shows up in `ps` and
-  `/proc/<pid>/cmdline`. `printf` and `echo` are bash builtins, so the forms
-  above are safe.
+Then open the site in a browser and sign in. No service has a healthcheck, so
+`n/n` only means the processes started. The browser test is the real check.
 
-Once created, a secret's value cannot be read back: `docker secret inspect`
-returns only metadata.
+## Troubleshooting
 
-| Secret                       | Value                                                  |
-| ---------------------------- | ------------------------------------------------------ |
-| `postgres_password`          | Postgres superuser password                            |
-| `auth_database_url`          | `postgres://postgres:<password>@postgres:5432/my_blog` |
-| `blog_database_url`          | same URL as above                                      |
-| `auth_redis_url`             | `redis://redis:6379`                                   |
-| `auth_secret`                | 32+ random characters                                  |
-| `auth_discord_client_id`     | Discord OAuth app                                      |
-| `auth_discord_client_secret` | Discord OAuth app                                      |
-| `auth_github_client_id`      | GitHub OAuth app                                       |
-| `auth_github_client_secret`  | GitHub OAuth app                                       |
+| Symptom | Check |
+|---|---|
+| A service is stuck at `0/n` | `docker service ps my-blog_<service> --no-trunc` shows why tasks fail. `docker service logs my-blog_<service>` shows the app's logs. |
+| Cloudflare shows error 521, 522 or 525 | It can't reach Caddy over HTTPS. Check `docker service logs my-blog_caddy` and that ports 80/443 are open. |
+| Cloudflare shows error 526, or Caddy logs certificate errors | Caddy has no certificate yet. If issuance keeps failing, switch the DNS record to **DNS only** (grey cloud) until Caddy logs `certificate obtained successfully`, then turn the proxy back on. |
+| Login fails at GitHub or Discord | The callback URL doesn't match. See the command below. |
+| Everyone is logged out after sign-in | `auth` must be served from the same domain as the site. Don't move it to a subdomain. |
+| `secret not found: my-blog_...` | A secret was deleted by hand. See [Change a secret](#change-a-secret). |
+| `auth` keeps failing with a password error | The `pgdata` volume was made with an older password. Restore the old secrets, or delete the volume to start fresh (**this deletes all data**). |
 
-Set the OAuth apps' callback URLs to
-`https://$DOMAIN_NAME/api/auth/callback/<provider>`. They must match exactly or
-login fails at the provider. Confirm what `auth` actually sends:
+To see the callback URL `auth` actually sends to GitHub:
 
 ```bash
 curl -s -o /dev/null -D- -X POST https://$DOMAIN_NAME/api/auth/sign-in/social \
   -H 'Content-Type: application/json' -d '{"provider":"github","callbackURL":"/"}' \
-  | grep -i '^location' | grep -o 'redirect_uri=[^&]*'
+  | grep -io 'redirect_uri=[^&]*'
 ```
 
-The `my_blog` database is created by `POSTGRES_DB` on first startup only. If the
-`pgdata` volume already exists, create it by hand:
-`docker exec -it $(docker ps -qf name=my-blog_postgres) createdb -U postgres my_blog`.
+## Change a secret
 
-Secrets are immutable. To change one, create it under a new name and
-`docker service update --secret-rm old --secret-add source=new,target=<target>`.
-Rotating `auth_secret` logs everyone out.
-
-## 4. Build
+Secrets can't be read back or edited. To change one, remove it and let the
+script create it again. A service that uses a secret has to be stopped before
+the secret can be removed, so take the whole stack down first:
 
 ```bash
-./scripts/01-docker-build.sh
+docker stack rm my-blog              # wait ~10s for the containers to stop
+docker secret rm my-blog_auth_github_client_secret
+./scripts/deploy.sh                   # asks for the new value
 ```
 
-## 5. Deploy and migrate
+All secrets have a `my-blog_` prefix:
 
-`auth` needs its schema created by a one-off job, and that job needs Postgres
-running. On a **first** deploy, that means deploying before migrating:
+| Secret | Created by |
+|---|---|
+| `postgres_password`, `auth_database_url`, `blog_database_url` | Generated together. Only change them along with the `pgdata` volume, since Postgres keeps the password from the first start. |
+| `redis_acl`, `redis_url` | Generated together. `redis_acl` holds only a hash of the password; `redis_url` has the password itself, for `auth`. Remove both to change it. |
+| `auth_secret` | Generated. Changing it logs everyone out. |
+| `auth_github_client_id`, `auth_github_client_secret` | You, when prompted |
+| `auth_discord_client_id`, `auth_discord_client_secret` | You, when prompted |
+
+## Settings
+
+All of these go in `.env`:
+
+| Variable | Default | What it does |
+|---|---|---|
+| `DOMAIN_NAME` | *required* | The site's domain. All public URLs come from it. |
+| `ACME_EMAIL` | `admin@example.com` | Let's Encrypt sends certificate expiry warnings here. |
+| `REPLICAS` | `2` | Copies of `web`, `auth` and `blog-posts`. |
+| `LOG_LEVEL` | `info` | Log level for `auth`. |
+| `TAG` | current commit | Set it to deploy an existing build. See [Roll back](#roll-back). |
+| `IMAGE_PREFIX` | `my-blog` | Image name prefix. Change it only for a registry. |
+| `PUSH` | `0` | `1` pushes images to the registry after building. |
+| `RESOLVE_IMAGE` | `never` | `always` when nodes pull images from a registry. |
+
+Leave the last three alone on a single server.
+
+## Running locally
+
+Set `DOMAIN_NAME=localhost` and deploy as usual. Caddy signs `localhost` with
+its own certificate authority instead of Let's Encrypt, so:
+
+`curl` needs `-k`, and browsers show a warning. To trust it, copy
+`/data/caddy/pki/authorities/local/root.crt` out of the Caddy container and
+install it.
+
+## How it fits together
+
+Everything is served from one domain, with Caddy routing by path:
+
+| Path | Service |
+|---|---|
+| `/api/auth/*` | `auth` (sign-in, sessions) |
+| `/api/blog/*` | `blog-posts`. Caddy strips the prefix, so the service sees `/posts`. |
+| everything else | `web` (the site) |
+
+`auth` must be on the same domain as the site because its session cookie is
+host-only. On a subdomain the browser would never send the cookie to the site,
+and `web`, which reads the session server-side, would see every user as logged
+out.
+
+Server-side, `web` calls `auth` and `blog-posts` directly over the internal
+network (`http://auth:3001`, `http://blog-posts:3000`) instead of going back out
+through Caddy. Browsers get the public URL.
+
+Postgres, Redis and Caddy run on the manager node. Postgres and Caddy keep
+their data in the `pgdata`, `caddy_data` and `caddy_config` volumes. Redis
+requires a password and has no volume; it only holds sessions, so replacing
+it logs everyone out.
+
+**Visitor IPs.** All traffic arrives through Cloudflare. Caddy's ports use
+`mode: host`, so Caddy sees the connecting Cloudflare address instead of
+Swarm's routing mesh. For requests from Cloudflare's IP ranges, Caddy takes
+the visitor's IP from `CF-Connecting-IP`. The ranges are downloaded when the
+Caddy image is built, so every deploy refreshes them. Rate limiting and
+Caddy's logs use that IP, and Caddy passes it to `auth` as `X-Real-IP`, which
+is the only header `auth` trusts for it.
+
+## Upgrading from the old numbered scripts
+
+`scripts/01-03` and the separate `migrate-auth` job are gone. `auth` now migrates
+itself on startup, and Redis now requires a password, with its URL in the new
+`my-blog_redis_url` secret. After the first deploy with the new script, remove
+what's left over:
 
 ```bash
-./scripts/02-deploy.sh     # auth crash-loops until the next step finishes
-./scripts/03-migrate.sh    # follows the job's logs; Ctrl-C when it succeeds
-docker service rm migrate-auth
+docker service rm migrate-auth 2>/dev/null
+docker secret rm my-blog_auth_redis_url
 ```
-
-On **later** deploys, migrate first:
-
-```bash
-./scripts/03-migrate.sh && docker service rm migrate-auth
-./scripts/02-deploy.sh
-```
-
-`blog-posts` migrates itself on startup, so it needs nothing here.
-
-The job runs `node dist/migrate.js`, which calls better-auth's `getMigrations()`
-from the copy already in the image. It does not install anything at runtime, so
-it works offline and cannot drift.
-
-After `auth`'s schema is created for the first time, restart it so it stops
-reporting a schema mismatch:
-
-```bash
-docker service update --force my-blog_auth
-```
-
-Updates use `start-first`: the new task must be running before the old one is
-killed, so both versions serve briefly. Keep migrations backwards-compatible
-with the previous image for one deploy.
-
-## 6. Verify
-
-The commands below use `$DOMAIN_NAME`, so load `.env` first.
-
-```bash
-set -a; . ./.env; set +a
-```
-
-```bash
-docker stack services my-blog                 # all replicas n/n
-docker service ps my-blog_web --no-trunc      # failure reasons if not
-docker service logs -f my-blog_auth
-docker service logs -f my-blog_caddy            # certificate issuance and failures
-curl -f https://$DOMAIN_NAME
-curl -f https://$DOMAIN_NAME/api/auth/ok                    # {"ok":true}
-curl -s https://$DOMAIN_NAME/api/auth/get-session           # null when logged out
-curl -f https://$DOMAIN_NAME/api/blog/posts                 # exercises blog-posts
-curl -sI https://$DOMAIN_NAME/build/ | grep -i cache-control   # immutable
-```
-
-Add `-k` on a local deploy until you trust Caddy's CA — without it a request
-fails on certificate verification, which looks the same as the service being
-down.
-
-Confirm the auth tables exist:
-
-```bash
-docker exec $(docker ps -qf name=my-blog_postgres) \
-  psql -U postgres -d my_blog -tAc \
-  "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY 1;"
-```
-
-Expect `account`, `blog_posts`, `user`, `_sqlx_migrations`. Sessions live in
-Redis, so there is no `session` table.
-
-No service declares a healthcheck, so `n/n` means the process started, not that
-it works. Open the site in a browser and check the console.
-
-To see which auth origin a running `web` hands to browsers:
-
-```bash
-curl -s https://$DOMAIN_NAME | grep -o 'auth-host" content="[^"]*"'
-```
-
-## Known issues
-
-- **Swarm's routing mesh hides the client IP** from Caddy, so its access logs
-  show overlay addresses. Needs `mode: host` on the published ports to fix, which
-  pins the proxy to one node.

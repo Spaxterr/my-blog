@@ -12,6 +12,9 @@ services:
 
   redis:
     image: redis:8-alpine
+    # The ACL file holds only a hash of the password; auth gets the plain one in redis_url.
+    command: ["redis-server", "--aclfile", "/run/secrets/redis_acl"]
+    secrets: [redis_acl]
     deploy:
       placement:
         constraints: [node.role == manager]
@@ -21,10 +24,11 @@ services:
     environment:
       DOMAIN_NAME: ${DOMAIN_NAME:?set DOMAIN_NAME in .env}
       ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+    # Host mode, so Caddy sees Cloudflare's address instead of the routing mesh's.
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
+      - { target: 80, published: 80, mode: host }
+      - { target: 443, published: 443, mode: host }
+      - { target: 443, published: 443, protocol: udp, mode: host }
     volumes:
       - caddy_data:/data
       - caddy_config:/config
@@ -41,7 +45,7 @@ services:
     secrets:
       - source: auth_database_url
         target: database_url
-      - source: auth_redis_url
+      - source: redis_url
         target: redis_url
       - source: auth_discord_client_id
         target: discord_client_id
@@ -91,7 +95,8 @@ volumes:
 secrets:
   postgres_password: { external: true, name: my-blog_postgres_password }
   auth_database_url: { external: true, name: my-blog_auth_database_url }
-  auth_redis_url: { external: true, name: my-blog_auth_redis_url }
+  redis_acl: { external: true, name: my-blog_redis_acl }
+  redis_url: { external: true, name: my-blog_redis_url }
   auth_discord_client_id: { external: true, name: my-blog_auth_discord_client_id }
   auth_discord_client_secret: { external: true, name: my-blog_auth_discord_client_secret }
   auth_github_client_id: { external: true, name: my-blog_auth_github_client_id }

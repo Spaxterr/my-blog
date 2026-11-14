@@ -11,7 +11,7 @@
     # Only rate-limit dynamic/API traffic to avoid breaking Qwik
     rate_limit @dynamic {
         zone global_limit {
-            key {remote_host}
+            key {client_ip}
             events 100
             window 30s
         }
