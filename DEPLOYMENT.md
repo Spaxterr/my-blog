@@ -1,7 +1,9 @@
 # Deployment
 
-The app runs as a Docker Swarm stack on one machine. One script builds, creates
-secrets, and deploys:
+The app runs as a Docker Swarm stack on one machine, behind the Caddy that is
+installed on the server itself. That Caddy owns ports 80 and 443 and the TLS
+certificate, so it can serve other sites too. It forwards this site to the
+stack through a Unix socket. One script builds, creates secrets, and deploys:
 
 ```bash
 ./scripts/deploy.sh
@@ -15,14 +17,15 @@ Run these on the server, from a git checkout of this repo.
 
 - Under **DNS**, add an `A` record for your domain with the server's public IP,
   and leave **Proxied** on (orange cloud).
-- Under **SSL/TLS**, set the encryption mode to **Full (strict)**. Caddy gets
-  a real Let's Encrypt certificate, so Cloudflare can verify it.
-- Open ports 80 and 443 (TCP and UDP) on the server.
+- Under **SSL/TLS**, set the encryption mode to **Full (strict)**. The
+  server's Caddy gets a real Let's Encrypt certificate, so Cloudflare can
+  verify it.
 
-**2. Turn on Swarm** (only once per machine):
+**2. Prepare the server** (only once per machine):
 
 ```bash
-docker swarm init
+docker swarm init                # skip if Swarm is already on
+sudo mkdir /var/lib/my-blog      # the stack puts its socket here
 ```
 
 **3. Create the OAuth apps** on [GitHub](https://github.com/settings/developers)
@@ -40,7 +43,7 @@ Keep the client IDs and secrets at hand for step 5.
 
 ```bash
 cp .env.example .env
-$EDITOR .env        # set DOMAIN_NAME and ACME_EMAIL
+$EDITOR .env        # set DOMAIN_NAME
 ```
 
 **5. Deploy:**
@@ -54,7 +57,42 @@ never touch disk or shell history. The script generates the database and Redis
 passwords and the auth signing secret itself.
 
 Postgres needs a few seconds to start, so `auth` may restart a couple of times
-first. That's normal. Then [check it works](#check-it-works).
+first. That's normal.
+
+**6. Connect the server's Caddy.** Save Cloudflare's IP ranges where Caddy can
+import them:
+
+```bash
+{ printf 'trusted_proxies static'; for v in 4 6; do curl -fsS https://www.cloudflare.com/ips-v$v | sed 's/^/ /' | tr -d '\n'; done; echo; } \
+  | sudo tee /etc/caddy/cloudflare-ips.caddy
+```
+
+Then add this to `/etc/caddy/Caddyfile`, with your domain in place of
+`example.com`. If the file already starts with a `{ ... }` block, add the
+`servers` part to it instead of adding a second one.
+
+```caddyfile
+{
+	servers {
+		import /etc/caddy/cloudflare-ips.caddy
+		client_ip_headers CF-Connecting-IP
+	}
+}
+
+example.com {
+	reverse_proxy unix//var/lib/my-blog/caddy.sock {
+		header_up CF-Connecting-IP {client_ip}
+	}
+}
+```
+
+```bash
+sudo systemctl reload caddy
+```
+
+The `header_up` line overwrites `CF-Connecting-IP` with the IP Caddy has
+verified, so a request that bypasses Cloudflare can't fake its IP. Then
+[check it works](#check-it-works).
 
 ## Deploy an update
 
@@ -101,10 +139,12 @@ Then open the site in a browser and sign in. No service has a healthcheck, so
 | Symptom | Check |
 |---|---|
 | A service is stuck at `0/n` | `docker service ps my-blog_<service> --no-trunc` shows why tasks fail. `docker service logs my-blog_<service>` shows the app's logs. |
-| Cloudflare shows error 521, 522 or 525 | It can't reach Caddy over HTTPS. Check `docker service logs my-blog_caddy` and that ports 80/443 are open. |
-| Cloudflare shows error 526, or Caddy logs certificate errors | Caddy has no certificate yet. If issuance keeps failing, switch the DNS record to **DNS only** (grey cloud) until Caddy logs `certificate obtained successfully`, then turn the proxy back on. |
+| Cloudflare shows error 521, 522 or 525 | It can't reach the server's Caddy over HTTPS. Check `sudo journalctl -u caddy -n 50` and that ports 80/443 are open. |
+| Cloudflare shows error 526, or the server's Caddy logs certificate errors | The server's Caddy has no certificate for the domain yet. If issuance keeps failing, switch the DNS record to **DNS only** (grey cloud) until `journalctl -u caddy` shows `certificate obtained successfully`, then turn the proxy back on. |
+| `502 Bad Gateway` | The server's Caddy can't reach the stack. Check that `/var/lib/my-blog/caddy.sock` exists and that `my-blog_caddy` is `1/1`. |
 | Login fails at GitHub or Discord | The callback URL doesn't match. See the command below. |
 | Everyone is logged out after sign-in | `auth` must be served from the same domain as the site. Don't move it to a subdomain. |
+| `auth` or `blog-posts` crash with `No route to host`, or connections between services time out | The stack's network is stuck. Run `docker stack rm my-blog`, wait about 15 seconds, then `./scripts/deploy.sh`. Volumes and secrets are kept. |
 | `secret not found: my-blog_...` | A secret was deleted by hand. See [Change a secret](#change-a-secret). |
 | `auth` keeps failing with a password error | The `pgdata` volume was made with an older password. Restore the old secrets, or delete the volume to start fresh (**this deletes all data**). |
 
@@ -145,7 +185,6 @@ All of these go in `.env`:
 | Variable | Default | What it does |
 |---|---|---|
 | `DOMAIN_NAME` | *required* | The site's domain. All public URLs come from it. |
-| `ACME_EMAIL` | `admin@example.com` | Let's Encrypt sends certificate expiry warnings here. |
 | `REPLICAS` | `2` | Copies of `web`, `auth` and `blog-posts`. |
 | `LOG_LEVEL` | `info` | Log level for `auth`. |
 | `TAG` | current commit | Set it to deploy an existing build. See [Roll back](#roll-back). |
@@ -157,16 +196,21 @@ Leave the last three alone on a single server.
 
 ## Running locally
 
-Set `DOMAIN_NAME=localhost` and deploy as usual. Caddy signs `localhost` with
-its own certificate authority instead of Let's Encrypt, so:
+Set `DOMAIN_NAME=localhost`, do step 2 of the first deploy,
+and deploy as usual. You don't need Cloudflare or a host Caddy to try it: talk
+to the socket directly.
 
-`curl` needs `-k`, and browsers show a warning. To trust it, copy
-`/data/caddy/pki/authorities/local/root.crt` out of the Caddy container and
-install it.
+```bash
+curl --unix-socket /var/lib/my-blog/caddy.sock http://localhost/api/auth/ok
+```
+
+To use it in a browser, add a `localhost` block with the same `reverse_proxy`
+to a local Caddy.
 
 ## How it fits together
 
-Everything is served from one domain, with Caddy routing by path:
+A request goes Cloudflare → the server's Caddy (TLS) → `caddy.sock` → the
+stack's Caddy, which routes by path:
 
 | Path | Service |
 |---|---|
@@ -183,27 +227,29 @@ Server-side, `web` calls `auth` and `blog-posts` directly over the internal
 network (`http://auth:3001`, `http://blog-posts:3000`) instead of going back out
 through Caddy. Browsers get the public URL.
 
-Postgres, Redis and Caddy run on the manager node. Postgres and Caddy keep
-their data in the `pgdata`, `caddy_data` and `caddy_config` volumes. Redis
-requires a password and has no volume; it only holds sessions, so replacing
-it logs everyone out.
+Postgres, Redis and Caddy run on the manager node. Postgres keeps its data in
+the `pgdata` volume. Redis requires a password and has no volume; it only holds
+sessions, so replacing it logs everyone out. The stack's Caddy has no ports and
+no certificates; it only listens on the socket.
 
-**Visitor IPs.** All traffic arrives through Cloudflare. Caddy's ports use
-`mode: host`, so Caddy sees the connecting Cloudflare address instead of
-Swarm's routing mesh. For requests from Cloudflare's IP ranges, Caddy takes
-the visitor's IP from `CF-Connecting-IP`. The ranges are downloaded when the
-Caddy image is built, so every deploy refreshes them. Rate limiting and
-Caddy's logs use that IP, and Caddy passes it to `auth` as `X-Real-IP`, which
-is the only header `auth` trusts for it.
+**Visitor IPs.** The server's Caddy trusts `CF-Connecting-IP` only from
+Cloudflare's IP ranges (step 6) and passes the result on in the same header.
+The stack's Caddy trusts that header from the socket, since only the server can
+connect to it. Rate limiting uses that IP, and Caddy passes it to `auth` as
+`X-Real-IP`, which is the only header `auth` trusts for it. Cloudflare rarely
+changes its ranges; to refresh them, rerun step 6's first command and reload
+Caddy.
 
 ## Upgrading from the old numbered scripts
 
 `scripts/01-03` and the separate `migrate-auth` job are gone. `auth` now migrates
-itself on startup, and Redis now requires a password, with its URL in the new
-`my-blog_redis_url` secret. After the first deploy with the new script, remove
-what's left over:
+itself on startup, Redis now requires a password, with its URL in the new
+`my-blog_redis_url` secret, and the stack's Caddy no longer handles TLS. Run
+`sudo mkdir /var/lib/my-blog` and do step 6 of the first deploy. Then, after
+the first deploy with the new script, remove what's left over:
 
 ```bash
 docker service rm migrate-auth 2>/dev/null
 docker secret rm my-blog_auth_redis_url
+docker volume rm my-blog_caddy_data my-blog_caddy_config
 ```

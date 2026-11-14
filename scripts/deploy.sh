@@ -7,6 +7,7 @@ cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 [ -f .env ] || { echo "No .env: run 'cp .env.example .env' and set DOMAIN_NAME" >&2; exit 1; }
 set -a; . ./.env; set +a
 : "${IMAGE_PREFIX:=my-blog}"
+[ -d /var/lib/my-blog ] || { echo "Missing socket directory: run 'sudo mkdir /var/lib/my-blog' once" >&2; exit 1; }
 
 if [ -z "${TAG:-}" ]; then
   TAG=$(git rev-parse --short HEAD)

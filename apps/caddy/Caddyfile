@@ -1,15 +1,16 @@
 {
-	email {$ACME_EMAIL:admin@example.com}
     order rate_limit before basicauth
 	servers {
-		import /etc/caddy/cloudflare-ips.caddy
+		# Only the server's own Caddy can reach the socket; it sets CF-Connecting-IP.
+		trusted_proxies_unix
 		client_ip_headers CF-Connecting-IP
 	}
 }
 
 import snippets/*.caddy
 
-{$DOMAIN_NAME} {
+http://{$DOMAIN_NAME} {
+	bind unix//run/my-blog/caddy.sock|0666
 	import security_and_compression
 	import tarpit_config
 	import qwik_optimizations
