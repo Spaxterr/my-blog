@@ -2,7 +2,8 @@ FROM ghcr.io/pnpm/pnpm:12 AS build
 
 ENV NODE_ENV="production"
 
-RUN pnpm runtime set node 26 -g
+# Outside /pnpm/store: the cache mount below hides that, which would break the runtime symlink.
+RUN pnpm runtime set node 26 -g --store-dir /opt/pnpm-runtime
 WORKDIR /app
 COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
