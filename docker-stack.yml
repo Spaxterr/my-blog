@@ -72,6 +72,7 @@ services:
     environment:
       BLOG_POSTS_HOST: http://blog-posts:3000
       AUTH_HOST: https://${DOMAIN_NAME}
+      ORIGIN: https://${DOMAIN_NAME}
       AUTH_INTERNAL_HOST: http://auth:3001
     deploy:
       replicas: ${REPLICAS:-2}
